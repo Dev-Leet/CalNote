@@ -1,0 +1,39 @@
+// apps/api/src/cron/index.ts
+// Cron job initialization
+
+import cron from 'node-cron';
+import { config } from '../config/env';
+import { logger } from '../config/logger';
+import { scrapeAllContests } from './scrapeContests';
+import { sendReminders } from './sendReminders';
+
+/**
+ * Initialize all cron jobs
+ */
+export const initCronJobs = () => {
+  // Contest scraping job
+  cron.schedule(config.cron.scrapeSchedule, async () => {
+    logger.info('🔄 Starting contest scraping job...');
+    try {
+      await scrapeAllContests();
+      logger.info('✅ Contest scraping completed');
+    } catch (error) {
+      logger.error('❌ Contest scraping failed:', error);
+    }
+  });
+
+  // Reminder job
+  cron.schedule(config.cron.reminderSchedule, async () => {
+    logger.info('🔔 Starting reminder job...');
+    try {
+      await sendReminders();
+      logger.info('✅ Reminders sent');
+    } catch (error) {
+      logger.error('❌ Reminder job failed:', error);
+    }
+  });
+
+  logger.info('⏰ Cron jobs initialized:');
+  logger.info(`  - Contest scraping: ${config.cron.scrapeSchedule}`);
+  logger.info(`  - Reminders: ${config.cron.reminderSchedule}`);
+};

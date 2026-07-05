@@ -1,0 +1,80 @@
+# docker-compose.yml
+# Docker Compose configuration for local development
+
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cp-calendar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cp_calendar
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: cp-calendar-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # API Server (optional - can run locally with npm run dev)
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/api/Dockerfile
+  #   container_name: cp-calendar-api
+  #   restart: unless-stopped
+  #   env_file:
+  #     - apps/api/.env
+  #   ports:
+  #     - '4000:4000'
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./apps/api:/app/apps/api
+  #     - /app/node_modules
+
+  # Web Frontend (optional - can run locally with npm run dev)
+  # web:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/web/Dockerfile
+  #   container_name: cp-calendar-web
+  #   restart: unless-stopped
+  #   env_file:
+  #     - apps/web/.env
+  #   ports:
+  #     - '3000:3000'
+  #   volumes:
+  #     - ./apps/web:/app/apps/web
+  #     - /app/node_modules
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

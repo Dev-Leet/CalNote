@@ -1,0 +1,75 @@
+// apps/api/src/scrapers/CodeforcesScraper.ts
+// Codeforces contest scraper
+
+import axios from 'axios';
+import { Platform } from '@prisma/client';
+import { logger } from '../config/logger';
+import { ScrapedContest } from './LeetCodeScraper';
+
+export class CodeforcesScraper {
+  private readonly API_URL = 'https://codeforces.com/api/contest.list';
+
+  /**
+   * Scrape Codeforces contests
+   */
+  async scrapeContests(): Promise<ScrapedContest[]> {
+    try {
+      logger.info('Scraping Codeforces contests...');
+
+      const response = await axios.get(this.API_URL, {
+        headers: {
+          'User-Agent': 'CP Calendar Bot',
+        },
+      });
+
+      if (response.data.status !== 'OK') {
+        logger.error('Codeforces API error:', response.data);
+        return [];
+      }
+
+      const rawContests = response.data.result || [];
+
+      // Filter only upcoming and running contests
+      const contests: ScrapedContest[] = rawContests
+        .filter((c: any) => c.phase === 'BEFORE' || c.phase === 'CODING')
+        .map((contest: any) => {
+          const startTime = new Date(contest.startTimeSeconds * 1000);
+          const duration = contest.durationSeconds; // in seconds
+          const endTime = new Date(startTime.getTime() + duration * 1000);
+
+          return {
+            platform: Platform.CODEFORCES,
+            externalId: String(contest.id),
+            name: contest.name,
+            url: `https://codeforces.com/contest/${contest.id}`,
+            startTime,
+            endTime,
+            duration: Math.floor(duration / 60), // Convert to minutes
+            phase: contest.phase,
+            difficulty: this.extractDifficulty(contest.name),
+          };
+        });
+
+      logger.info(`Found ${contests.length} Codeforces contests`);
+      return contests;
+    } catch (error) {
+      logger.error('Codeforces scraper error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Extract difficulty from contest name
+   */
+  private extractDifficulty(name: string): string | undefined {
+    if (name.includes('Div. 1')) return 'Div. 1';
+    if (name.includes('Div. 2')) return 'Div. 2';
+    if (name.includes('Div. 3')) return 'Div. 3';
+    if (name.includes('Div. 4')) return 'Div. 4';
+    if (name.includes('Educational')) return 'Educational';
+    if (name.includes('Global')) return 'Global';
+    return undefined;
+  }
+}
+
+export const codeforcesScraper = new CodeforcesScraper();

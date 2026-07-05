@@ -1,0 +1,65 @@
+// apps/api/src/utils/encryption.ts
+// Encryption utilities for sensitive data
+
+import CryptoJS from 'crypto-js';
+import { config } from '../config/env';
+
+/**
+ * Encrypt text using AES-256
+ */
+export const encrypt = (text: string): string => {
+  try {
+    const encrypted = CryptoJS.AES.encrypt(text, config.encryption.key);
+    return encrypted.toString();
+  } catch (error) {
+    throw new Error(`Encryption failed: ${error}`);
+  }
+};
+
+/**
+ * Decrypt text using AES-256
+ */
+export const decrypt = (encryptedText: string): string => {
+  try {
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, config.encryption.key);
+    const text = decrypted.toString(CryptoJS.enc.Utf8);
+    
+    if (!text) {
+      throw new Error('Decryption returned empty string');
+    }
+    
+    return text;
+  } catch (error) {
+    throw new Error(`Decryption failed: ${error}`);
+  }
+};
+
+/**
+ * Encrypt object (converts to JSON first)
+ */
+export const encryptObject = <T>(obj: T): string => {
+  const json = JSON.stringify(obj);
+  return encrypt(json);
+};
+
+/**
+ * Decrypt to object
+ */
+export const decryptObject = <T>(encryptedText: string): T => {
+  const json = decrypt(encryptedText);
+  return JSON.parse(json) as T;
+};
+
+/**
+ * Hash text using SHA-256 (one-way)
+ */
+export const hash = (text: string): string => {
+  return CryptoJS.SHA256(text).toString();
+};
+
+/**
+ * Generate random token
+ */
+export const generateRandomToken = (length: number = 32): string => {
+  return CryptoJS.lib.WordArray.random(length).toString();
+};

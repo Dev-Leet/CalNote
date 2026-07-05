@@ -1,0 +1,127 @@
+// apps/web/src/components/dashboard/ContestCard.tsx
+// Contest card component
+
+import { format } from 'date-fns';
+import { Calendar, Clock, ExternalLink } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import { toast } from 'sonner';
+
+interface Contest {
+  id: string;
+  platform: string;
+  name: string;
+  url: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  phase?: string;
+  difficulty?: string;
+}
+
+interface ContestCardProps {
+  contest: Contest;
+  isLive?: boolean;
+}
+
+const platformColors: Record<string, string> = {
+  LEETCODE: 'bg-yellow-100 text-yellow-800',
+  CODEFORCES: 'bg-blue-100 text-blue-800',
+  CODECHEF: 'bg-orange-100 text-orange-800',
+};
+
+const ContestCard = ({ contest, isLive = false }: ContestCardProps) => {
+  const queryClient = useQueryClient();
+
+  const addToCalendarMutation = useMutation({
+    mutationFn: async (contestId: string) => {
+      const response = await axios.post(`/api/v1/calendar/add/${contestId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Contest added to Google Calendar!');
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+    },
+    onError: () => {
+      toast.error('Failed to add contest to calendar');
+    },
+  });
+
+  const handleAddToCalendar = () => {
+    addToCalendarMutation.mutate(contest.id);
+  };
+
+  return (
+    <div
+      className={`bg-white border rounded-lg p-6 hover:shadow-lg transition ${
+        isLive ? 'border-red-500 border-2' : 'border-gray-200'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          {/* Platform Badge */}
+          <div className="flex items-center gap-3 mb-3">
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                platformColors[contest.platform] || 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              {contest.platform}
+            </span>
+            {contest.difficulty && (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                {contest.difficulty}
+              </span>
+            )}
+            {isLive && (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse">
+                LIVE
+              </span>
+            )}
+          </div>
+
+          {/* Contest Name */}
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {contest.name}
+          </h3>
+
+          {/* Time Info */}
+          <div className="space-y-1 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>
+                {format(new Date(contest.startTime), 'MMM dd, yyyy • hh:mm a')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>{contest.duration} minutes</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-2">
+          <a
+            href={contest.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Open
+          </a>
+          <button
+            onClick={handleAddToCalendar}
+            disabled={addToCalendarMutation.isPending}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm disabled:opacity-50"
+          >
+            {addToCalendarMutation.isPending ? 'Adding...' : 'Add to Calendar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ContestCard;

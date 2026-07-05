@@ -1,0 +1,107 @@
+// packages/database/prisma/schema.prisma
+// Prisma database schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================
+// User Model
+// =====================================
+
+model User {
+  id             String    @id @default(cuid())
+  googleId       String    @unique
+  email          String    @unique
+  name           String?
+  profilePicture String?
+  
+  // Google Calendar OAuth tokens (encrypted)
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiry    DateTime?
+  
+  // Preferences
+  timezone       String    @default("UTC")
+  notifyBefore15Min Boolean @default(true)
+  notifyBefore1Hour Boolean @default(true)
+  notifyBefore1Day  Boolean @default(true)
+  enabledPlatforms String[] @default(["LEETCODE", "CODEFORCES", "CODECHEF"])
+  
+  // Relationships
+  notes          Note[]
+  
+  // Metadata
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastLoginAt    DateTime?
+  
+  @@map("users")
+}
+
+// =====================================
+// Contest Model
+// =====================================
+
+enum Platform {
+  LEETCODE
+  CODEFORCES
+  CODECHEF
+}
+
+model Contest {
+  id          String   @id @default(cuid())
+  platform    Platform
+  externalId  String   // Platform-specific contest ID
+  name        String
+  url         String
+  
+  // Timing
+  startTime   DateTime
+  endTime     DateTime
+  duration    Int      // in minutes
+  
+  // Additional info
+  phase       String?  // e.g., "BEFORE", "CODING", "FINISHED"
+  difficulty  String?  // e.g., "Div. 1", "Div. 2"
+  
+  // Relationships
+  notes       Note[]
+  
+  // Metadata
+  scrapedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([platform, externalId])
+  @@index([startTime])
+  @@index([platform])
+  @@map("contests")
+}
+
+// =====================================
+// Note Model
+// =====================================
+
+model Note {
+  id         String   @id @default(cuid())
+  userId     String
+  contestId  String
+  content    String   @db.Text
+  
+  // Relationships
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contest    Contest  @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([userId, contestId])
+  @@map("notes")
+}

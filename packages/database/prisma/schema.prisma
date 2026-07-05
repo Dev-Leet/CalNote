@@ -1,0 +1,189 @@
+// packages/database/prisma/schema.prisma
+// Full database schema for CP Calendar App
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================
+// User Model
+// =============================================
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  name           String?
+  profilePicture String?
+  googleId       String?   @unique
+
+  // OAuth Tokens (AES-256 encrypted at application layer)
+  accessToken  String?   @db.Text
+  refreshToken String?   @db.Text
+  tokenExpiry  DateTime?
+
+  // Calendar Settings
+  calendarId String? // User's Google Calendar ID
+  timezone   String  @default("Asia/Kolkata")
+
+  // Notification Preferences
+  notifyBefore5Min  Boolean @default(true)
+  notifyBefore15Min Boolean @default(true)
+  notifyBefore1Hour Boolean @default(false)
+  notifyBefore1Day  Boolean @default(false)
+
+  // Platform Preferences (JSON boolean flags)
+  enabledPlatforms Json @default("{\"LEETCODE\": true, \"CODEFORCES\": true, \"CODECHEF\": true}")
+
+  // Metadata
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  // Relations
+  notes          Note[]
+  syncedContests SyncedContest[]
+
+  @@index([email])
+  @@index([googleId])
+  @@map("users")
+}
+
+// =============================================
+// Contest Model
+// =============================================
+
+model Contest {
+  id String @id @default(uuid())
+
+  // Contest Details
+  name     String
+  platform Platform
+  url      String
+  status   String @default("BEFORE") // BEFORE, CODING, FINISHED
+
+  // Timing (stored in UTC)
+  startTime DateTime
+  endTime   DateTime
+  duration  Int // Duration in minutes
+
+  // Optional platform-specific metadata
+  externalId String? // Platform-specific ID (e.g., CF round number)
+  difficulty String? // Div 1, Div 2, Biweekly, etc.
+  phase      String? // Codeforces phase: BEFORE, CODING, FINISHED
+
+  // Scraping Metadata
+  scrapedAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  syncedBy SyncedContest[]
+  notes    Note[]
+
+  @@unique([platform, url]) // URL is unique per platform
+  @@index([platform])
+  @@index([startTime])
+  @@index([status])
+  @@map("contests")
+}
+
+enum Platform {
+  LEETCODE
+  CODEFORCES
+  CODECHEF
+}
+
+// =============================================
+// SyncedContest (User ↔ Contest calendar sync)
+// =============================================
+
+model SyncedContest {
+  id String @id @default(uuid())
+
+  userId    String
+  contestId String
+
+  // Google Calendar event ID (populated after sync)
+  calendarEventId String? @unique
+
+  // Sync Status
+  syncStatus SyncStatus @default(PENDING)
+  syncError  String?    @db.Text
+  syncedAt   DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contest Contest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contestId])
+  @@index([userId])
+  @@index([contestId])
+  @@map("synced_contests")
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  DELETED
+}
+
+// =============================================
+// Note Model
+// =============================================
+
+model Note {
+  id String @id @default(uuid())
+
+  userId    String
+  contestId String?
+
+  // Content
+  title   String
+  content String  @db.Text
+  tags    String[] @default([])
+
+  // AI Generation Metadata
+  isAiGenerated Boolean @default(false)
+  aiPrompt      String? @db.Text
+  aiModel       String? // e.g., "gpt-4-turbo-preview"
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contest Contest? @relation(fields: [contestId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([contestId])
+  @@index([createdAt])
+  @@map("notes")
+}
+
+// =============================================
+// ScraperLog (Monitoring scraper runs)
+// =============================================
+
+model ScraperLog {
+  id String @id @default(uuid())
+
+  platform      Platform
+  status        String // SUCCESS, PARTIAL, FAILED
+  contestsFound Int      @default(0)
+  errors        Json?
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  duration    Int? // milliseconds
+
+  @@index([platform])
+  @@index([startedAt])
+  @@map("scraper_logs")
+}

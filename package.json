@@ -1,0 +1,34 @@
+{
+  "name": "cp-calendar-app",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo run clean",
+    "db:push": "turbo run db:push --filter=@cp-calendar/database",
+    "db:migrate": "turbo run db:migrate --filter=@cp-calendar/database",
+    "db:studio": "turbo run db:studio --filter=@cp-calendar/database",
+    "db:seed": "turbo run db:seed --filter=@cp-calendar/database",
+    "db:generate": "turbo run generate --filter=@cp-calendar/database"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.12.7"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "0.21.5"
+    }
+  },
+  "packageManager": "pnpm@9.0.0"
+}

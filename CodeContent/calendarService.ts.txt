@@ -1,0 +1,206 @@
+// apps/api/src/services/calendarService.ts
+// Google Calendar integration service
+
+import { google } from 'googleapis';
+import { prisma } from '@cp-calendar/database';
+import { decrypt } from '../utils/encryption';
+import { logger } from '../config/logger';
+import { config } from '../config/env';
+import { NotFoundError, InternalServerError } from '../middlewares/errorHandler';
+
+const calendar = google.calendar('v3');
+
+/**
+ * Get OAuth2 client for user
+ */
+const getOAuth2Client = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      accessToken: true,
+      refreshToken: true,
+      tokenExpiry: true,
+    },
+  });
+
+  if (!user || !user.accessToken || !user.refreshToken) {
+    throw new NotFoundError('User calendar credentials not found');
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    config.google.clientId,
+    config.google.clientSecret,
+    config.google.callbackUrl
+  );
+
+  // Decrypt tokens
+  const accessToken = decrypt(user.accessToken);
+  const refreshToken = decrypt(user.refreshToken);
+
+  oauth2Client.setCredentials({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expiry_date: user.tokenExpiry?.getTime(),
+  });
+
+  // Auto-refresh if expired
+  oauth2Client.on('tokens', async (tokens) => {
+    if (tokens.access_token) {
+      logger.info(`Refreshed access token for user ${userId}`);
+      // Update tokens in database would go here
+    }
+  });
+
+  return oauth2Client;
+};
+
+/**
+ * Add contest to Google Calendar
+ */
+export const addContestToCalendar = async (
+  userId: string,
+  contestId: string
+) => {
+  try {
+    // Get contest details
+    const contest = await prisma.contest.findUnique({
+      where: { id: contestId },
+    });
+
+    if (!contest) {
+      throw new NotFoundError('Contest not found');
+    }
+
+    // Get user preferences
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        timezone: true,
+        notifyBefore15Min: true,
+        notifyBefore1Hour: true,
+        notifyBefore1Day: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Prepare reminders
+    const reminders: any[] = [];
+    if (user.notifyBefore15Min) {
+      reminders.push({ method: 'popup', minutes: 15 });
+    }
+    if (user.notifyBefore1Hour) {
+      reminders.push({ method: 'popup', minutes: 60 });
+    }
+    if (user.notifyBefore1Day) {
+      reminders.push({ method: 'popup', minutes: 1440 });
+    }
+
+    // Get OAuth client
+    const auth = await getOAuth2Client(userId);
+
+    // Create calendar event
+    const event = {
+      summary: `${contest.platform} - ${contest.name}`,
+      description: `Contest URL: ${contest.url}\n\nPlatform: ${contest.platform}\nDuration: ${contest.duration} minutes`,
+      start: {
+        dateTime: contest.startTime.toISOString(),
+        timeZone: user.timezone,
+      },
+      end: {
+        dateTime: contest.endTime.toISOString(),
+        timeZone: user.timezone,
+      },
+      reminders: {
+        useDefault: false,
+        overrides: reminders,
+      },
+      colorId: getPlatformColor(contest.platform),
+    };
+
+    const response = await calendar.events.insert({
+      auth,
+      calendarId: 'primary',
+      requestBody: event,
+    });
+
+    logger.info(
+      `Added contest ${contestId} to calendar for user ${userId}: ${response.data.id}`
+    );
+
+    return {
+      success: true,
+      eventId: response.data.id,
+      eventLink: response.data.htmlLink,
+    };
+  } catch (error) {
+    logger.error('Error adding contest to calendar:', error);
+    throw new InternalServerError('Failed to add contest to calendar');
+  }
+};
+
+/**
+ * Get platform-specific calendar color
+ */
+const getPlatformColor = (platform: string): string => {
+  const colorMap: Record<string, string> = {
+    LEETCODE: '5', // Yellow
+    CODEFORCES: '9', // Blue
+    CODECHEF: '6', // Orange
+  };
+  return colorMap[platform] || '1'; // Default lavender
+};
+
+/**
+ * List user's calendar events
+ */
+export const listCalendarEvents = async (
+  userId: string,
+  timeMin?: Date,
+  timeMax?: Date
+) => {
+  try {
+    const auth = await getOAuth2Client(userId);
+
+    const response = await calendar.events.list({
+      auth,
+      calendarId: 'primary',
+      timeMin: (timeMin || new Date()).toISOString(),
+      timeMax: timeMax?.toISOString(),
+      maxResults: 50,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+
+    return response.data.items || [];
+  } catch (error) {
+    logger.error('Error listing calendar events:', error);
+    throw new InternalServerError('Failed to fetch calendar events');
+  }
+};
+
+/**
+ * Delete event from calendar
+ */
+export const deleteCalendarEvent = async (
+  userId: string,
+  eventId: string
+) => {
+  try {
+    const auth = await getOAuth2Client(userId);
+
+    await calendar.events.delete({
+      auth,
+      calendarId: 'primary',
+      eventId,
+    });
+
+    logger.info(`Deleted calendar event ${eventId} for user ${userId}`);
+    return { success: true };
+  } catch (error) {
+    logger.error('Error deleting calendar event:', error);
+    throw new InternalServerError('Failed to delete calendar event');
+  }
+};

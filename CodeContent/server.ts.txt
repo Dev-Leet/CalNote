@@ -1,0 +1,38 @@
+// apps/api/src/server.ts
+// Server entry point
+
+import app from './app';
+import { config } from './config/env';
+import { logger } from './config/logger';
+import { connectDatabase } from './config/database';
+import { connectRedis } from './config/redis';
+
+const PORT = config.port || 4000;
+
+// =====================================
+// Start Server
+// =====================================
+
+async function startServer() {
+  try {
+    // Connect to database
+    await connectDatabase();
+    logger.info('✅ Database connected successfully');
+
+    // Connect to Redis
+    await connectRedis();
+    logger.info('✅ Redis connected successfully');
+
+    // Start Express server
+    app.listen(PORT, () => {
+      logger.info(`🚀 Server running on http://localhost:${PORT}`);
+      logger.info(`📚 API Docs: http://localhost:${PORT}/api-docs`);
+      logger.info(`🌍 Environment: ${config.nodeEnv}`);
+    });
+  } catch (error) {
+    logger.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
