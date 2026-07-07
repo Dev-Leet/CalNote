@@ -13,17 +13,18 @@ export interface JwtPayload {
   exp?: number;
 }
 
-export interface AuthRequest extends Request {
-  user?: JwtPayload;
-}
+// AuthRequest is now just an alias for Request since we augmented Express.User
+export type AuthRequest = Request;
 
 /**
  * Generate a JWT token for a user
  */
 export function generateToken(userId: string, email: string): string {
-  return jwt.sign({ userId, email }, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn as string,
-  });
+  return jwt.sign(
+    { userId, email },
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
+  );
 }
 
 /**
@@ -37,7 +38,7 @@ export function verifyToken(token: string): JwtPayload {
  * requireAuth middleware — protects routes by validating JWT
  */
 export function requireAuth(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void {
@@ -54,7 +55,7 @@ export function requireAuth(
 
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
-    req.user = payload;
+    (req as any).user = payload;
     next();
   } catch (error) {
     logger.warn('Auth middleware: invalid token', { error });
@@ -69,7 +70,7 @@ export function requireAuth(
  * optionalAuth — attaches user if token present, but doesn't block
  */
 export function optionalAuth(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void {
@@ -77,7 +78,7 @@ export function optionalAuth(
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      req.user = verifyToken(token);
+      (req as any).user = verifyToken(token);
     }
   } catch {
     // Ignore invalid tokens in optional auth

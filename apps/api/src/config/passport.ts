@@ -2,7 +2,7 @@
 // Passport.js Google OAuth 2.0 strategy configuration
 
 import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-google-oauth20';
 import { config } from './env';
 import { authService } from '../services/authService';
 import { logger } from './logger';
@@ -14,16 +14,13 @@ export function configurePassport(): void {
         clientID: config.google.clientId,
         clientSecret: config.google.clientSecret,
         callbackURL: config.google.callbackUrl,
-        scope: [
-          'profile',
-          'email',
-          'https://www.googleapis.com/auth/calendar',
-          'https://www.googleapis.com/auth/calendar.events',
-        ],
-        accessType: 'offline',
-        prompt: 'consent', // Force refresh token on every login
       },
-      async (accessToken, refreshToken, profile, done) => {
+      async (
+        accessToken: string,
+        refreshToken: string,
+        profile: Profile,
+        done: VerifyCallback
+      ) => {
         try {
           const user = await authService.findOrCreateGoogleUser({
             googleId: profile.id,
