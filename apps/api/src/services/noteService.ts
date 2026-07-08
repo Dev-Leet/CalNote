@@ -6,6 +6,7 @@ import { prisma } from '../config/database';
 import { logger } from '../config/logger';
 import { config } from '../config/env';
 import { NotFoundError, ServiceUnavailableError } from '../middlewares/errorHandler';
+import { callAshnaNotesAgent } from './ashnaService';
 
 interface CreateNoteInput {
   userId: string;
@@ -96,12 +97,24 @@ class NoteService {
 
     const skillLevel = input.skillLevel ?? 'intermediate';
 
-    // Try OpenAI first, fall back to template
+    // Try Ashna first, then OpenAI, and fall back to a local template.
     let content: string;
     let aiModel: string;
 
     try {
-      if (config.ai.openaiKey) {
+      if (config.ai.ashnaKey?.trim() && config.ai.ashnaNotesUrl?.trim()) {
+        const result = await callAshnaNotesAgent({
+          contestName: contest.name,
+          platform: contest.platform,
+          startTime: contest.startTime,
+          duration: contest.duration,
+          url: contest.url,
+          skillLevel,
+          userPrompt: input.userPrompt,
+        });
+        content = result.content;
+        aiModel = result.model;
+      } else if (config.ai.openaiKey) {
         const result = await this.callOpenAI(contest, skillLevel, input.userPrompt);
         content = result.content;
         aiModel = result.model;
