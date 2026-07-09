@@ -1,4 +1,4 @@
-import { IContestSource } from '../contest.cron';
+import { IContestSource, RawContest } from './IContestSource';
 
 interface CodeforcesApiContest {
   id: number;
@@ -8,17 +8,24 @@ interface CodeforcesApiContest {
   durationSeconds: number;
 }
 
+interface CodeforcesApiResponse {
+  status: 'OK' | 'FAILED';
+  comment?: string;
+  result: CodeforcesApiContest[];
+}
+
 export const codeforcesSource: IContestSource = {
   platform: 'codeforces',
 
-  async fetchUpcoming() {
+  async fetchUpcoming(): Promise<RawContest[]> {
     const res = await fetch('https://codeforces.com/api/contest.list');
     if (!res.ok) {
       throw new Error(`Codeforces API returned status ${res.status}`);
     }
-    const data = (await res.json()) as { status: string; result: CodeforcesApiContest[] };
+
+    const data = (await res.json()) as CodeforcesApiResponse;
     if (data.status !== 'OK') {
-      throw new Error('Codeforces API returned non-OK status');
+      throw new Error(`Codeforces API error: ${data.comment ?? 'unknown'}`);
     }
 
     return data.result
