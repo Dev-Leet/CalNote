@@ -32,6 +32,7 @@ export function createApp(): Express {
   app.use('/api/v1/contests', contestRoutes);
   app.use('/api/v1/notes', notesRoutes);
   app.use('/api/v1/ai', aiRoutes);
+  app.use('/api/v1/users', userRoutes);
 
   // 404 handler
   app.use((_req: Request, res: Response) => {
