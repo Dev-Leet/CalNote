@@ -4,6 +4,7 @@ import { codeforcesSource } from './sources/codeforces.source';
 import { leetcodeSource } from './sources/leetcode.source';
 import { logger } from '../../utils/logger';
 import { redisClient } from '../../config/redis';
+import { contestService } from './contest.service';
 
 export interface IContestSource {
   platform: string;
@@ -30,54 +31,7 @@ export const agenda = new Agenda({
 });
 
 agenda.define(JOB_NAME, { concurrency: 1 }, async () => {
-  const runStart = Date.now();
-  let totalUpserted = 0;
-  let totalErrors = 0;
-
-  for (const source of SOURCES) {
-    try {
-      const rawContests = await source.fetchUpcoming();
-
-      for (const contest of rawContests) {
-        await ContestModel.updateOne(
-          { platform: source.platform, externalId: contest.externalId },
-          {
-            $set: {
-              name: contest.name,
-              startTime: contest.startTime,
-              endTime: contest.endTime,
-              url: contest.url,
-              durationMinutes: contest.durationMinutes,
-              lastSyncedAt: new Date(),
-            },
-            $setOnInsert: { fetchedAt: new Date() },
-          },
-          { upsert: true },
-        );
-        totalUpserted += 1;
-      }
-    } catch (err) {
-      totalErrors += 1;
-      logger.error({ err, platform: source.platform }, 'Contest scrape failed for platform');
-      // Continue to next platform — one platform's failure must not block others
-      // or degrade core calendar functionality (NFR-2 graceful degradation).
-    }
-  }
-
-  // Invalidate cached contest listings so the next GET /contests reflects fresh data.
-  try {
-    const keys = await redisClient.keys(`${CONTEST_CACHE_PREFIX}*`);
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
-  } catch (err) {
-    logger.error({ err }, 'Failed to invalidate contest cache after scrape');
-  }
-
-  logger.info(
-    { totalUpserted, totalErrors, durationMs: Date.now() - runStart },
-    'Contest scrape cycle complete',
-  );
+  await contestService.runScrapeCycle();
 });
 
 export async function startContestCron(): Promise<void> {
