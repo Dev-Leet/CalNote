@@ -1,14 +1,26 @@
-import { IContestSource } from '../contest.cron';
+import { IContestSource, RawContest } from './IContestSource';
 
 /**
- * LeetCode has no official public contest-list REST API; this adapter targets
- * their GraphQL endpoint used by the site itself. Verify field names/endpoint
- * stability periodically — unofficial APIs can change without notice.
+ * LeetCode has no official public REST endpoint for contest listings; this
+ * targets the GraphQL endpoint the site itself uses. Unofficial APIs can
+ * change without notice — treat scrape failures here as expected/recoverable
+ * (contest.service.ts continues to other sources on failure).
  */
+interface LeetCodeGraphQLResponse {
+  data: {
+    upcomingContests: {
+      title: string;
+      titleSlug: string;
+      startTime: number; // unix seconds
+      duration: number;  // seconds
+    }[];
+  };
+}
+
 export const leetcodeSource: IContestSource = {
   platform: 'leetcode',
 
-  async fetchUpcoming() {
+  async fetchUpcoming(): Promise<RawContest[]> {
     const query = `
       query upcomingContests {
         upcomingContests {
@@ -30,16 +42,7 @@ export const leetcodeSource: IContestSource = {
       throw new Error(`LeetCode GraphQL returned status ${res.status}`);
     }
 
-    const data = (await res.json()) as {
-      data: {
-        upcomingContests: {
-          title: string;
-          titleSlug: string;
-          startTime: number; // unix seconds
-          duration: number; // seconds
-        }[];
-      };
-    };
+    const data = (await res.json()) as LeetCodeGraphQLResponse;
 
     return data.data.upcomingContests.map((c) => ({
       externalId: c.titleSlug,
