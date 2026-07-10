@@ -1,0 +1,31 @@
+:root {
+  --color-bg-primary: #0B0F19;
+  --color-bg-surface: #141A29;
+  --color-bg-elevated: #1C2333;
+
+  --color-accent-ashna: #7C5CFC;
+  --color-accent-custom: #2DD4BF;
+
+  --color-text-primary: #F4F5F7;
+  --color-text-secondary: #9AA3B2;
+
+  --color-success: #34D399;
+  --color-warning: #FBBF24;
+  --color-danger: #F87171;
+
+  --color-contest-badge: #FB7185;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', monospace;
+
+  --radius: 8px;
+}
+
+[data-theme='light'] {
+  --color-bg-primary: #FFFFFF;
+  --color-bg-surface: #F7F8FA;
+  --color-bg-elevated: #EDEFF3;
+
+  --color-text-primary: #1A1D24;
+  --color-text-secondary: #5B6472;
+}
