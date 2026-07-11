@@ -1,8 +1,11 @@
 import { Types } from 'mongoose';
+import { RRule, rrulestr, Weekday } from 'rrule';
 import { EventModel, IEvent, IRecurrenceRule } from '../../models/Event.model';
+import { UserModel } from '../../models/User.model';
+import { googleCalendarSyncService } from './googleCalendar.sync';
 import { AppError } from '../../utils/AppError';
 import { rangesOverlap } from '../../utils/timezone';
-import { DateTime } from 'luxon';
+import { logger } from '../../utils/logger';
 
 export interface CreateEventInput {
   userId: string;
@@ -14,7 +17,7 @@ export interface CreateEventInput {
   recurrence?: IRecurrenceRule;
   aiReasoning?: string;
   noteId?: string;
-  force?: boolean; // bypass conflict check if true
+  force?: boolean;
 }
 
 export interface ConflictCheckResult {
@@ -22,21 +25,17 @@ export interface ConflictCheckResult {
   conflictingEventIds: string[];
 }
 
-const WEEKDAY_MAP: Record<string, number> = {
-  MO: 1,
-  TU: 2,
-  WE: 3,
-  TH: 4,
-  FR: 5,
-  SA: 6,
-  SU: 7,
+const BYDAY_TO_RRULE_WEEKDAY: Record<string, Weekday> = {
+  MO: RRule.MO,
+  TU: RRule.TU,
+  WE: RRule.WE,
+  TH: RRule.TH,
+  FR: RRule.FR,
+  SA: RRule.SA,
+  SU: RRule.SU,
 };
 
 export class EventService {
-  /**
-   * FR-4.2: detect whether a proposed [startTime, endTime) range overlaps
-   * any existing event for this user.
-   */
   async checkConflicts(
     userId: string,
     startTime: Date,
@@ -90,14 +89,41 @@ export class EventService {
       noteId: input.noteId ? new Types.ObjectId(input.noteId) : undefined,
     });
 
+    void this.syncToGoogleCalendarIfLinked(event);
+
     return event;
+  }
+
+  async syncToGoogleCalendarIfLinked(event: IEvent): Promise<void> {
+    try {
+      const user = await UserModel.findById(event.userId).select('+googleRefreshToken');
+      if (!user || !user.googleRefreshToken) return;
+      await googleCalendarSyncService.pushEvent(event, user);
+    } catch (err) {
+      logger.error({ err, eventId: event._id.toString() }, 'GCal sync wrapper failed');
+    }
+  }
+
+  private async cleanupGoogleCalendarIfLinked(event: IEvent): Promise<void> {
+    try {
+      if (!event.googleCalendarEventId) return;
+      const user = await UserModel.findById(event.userId).select('+googleRefreshToken');
+      if (!user || !user.googleRefreshToken) return;
+      await googleCalendarSyncService.deleteEvent(event, user);
+    } catch (err) {
+      logger.error({ err, eventId: event._id.toString() }, 'GCal cleanup wrapper failed');
+    }
   }
 
   /**
    * Expands a recurring event's rule into concrete occurrence instances within
-   * a given [rangeStart, rangeEnd) window, for calendar rendering. Does NOT
-   * persist expanded instances — they're computed on read, keeping the base
-   * Event document as the single source of truth for the rule itself.
+   * [rangeStart, rangeEnd), for calendar rendering. Computed on read — never
+   * persisted — keeping the base Event document as the single source of truth
+   * for the rule itself.
+   *
+   * Backed by the `rrule` library for all three freq values (previously only
+   * daily/weekly had a working hand-rolled implementation; 'custom' silently
+   * fell back to a single occurrence with no real recurrence expressed).
    */
   expandRecurrence(event: IEvent, rangeStart: Date, rangeEnd: Date): { startTime: Date; endTime: Date }[] {
     if (!event.recurrence) {
@@ -106,64 +132,69 @@ export class EventService {
         : [];
     }
 
-    const { freq, interval, byDay, until } = event.recurrence;
     const durationMs = event.endTime.getTime() - event.startTime.getTime();
-    const occurrences: { startTime: Date; endTime: Date }[] = [];
+    const rule = this.buildRRule(event);
 
-    const seriesStart = DateTime.fromJSDate(event.startTime, { zone: 'utc' });
-    const windowEnd = DateTime.fromJSDate(rangeEnd, { zone: 'utc' });
-    const seriesEnd = until ? DateTime.fromJSDate(until, { zone: 'utc' }) : windowEnd;
-    const effectiveEnd = seriesEnd < windowEnd ? seriesEnd : windowEnd;
-
-    if (freq === 'daily') {
-      let cursor = seriesStart;
-      while (cursor <= effectiveEnd) {
-        this.pushIfInRange(cursor, durationMs, rangeStart, rangeEnd, occurrences);
-        cursor = cursor.plus({ days: interval });
-      }
-    } else if (freq === 'weekly') {
-      const targetDays = byDay?.length
-        ? byDay.map((d) => WEEKDAY_MAP[d]).filter((d): d is number => d !== undefined)
-        : [seriesStart.weekday];
-
-      let weekCursor = seriesStart.startOf('week');
-      while (weekCursor <= effectiveEnd) {
-        for (const weekday of targetDays) {
-          const occurrence = weekCursor.set({ weekday: weekday as 1 | 2 | 3 | 4 | 5 | 6 | 7 }).set({
-            hour: seriesStart.hour,
-            minute: seriesStart.minute,
-            second: seriesStart.second,
-          });
-          if (occurrence >= seriesStart && occurrence <= effectiveEnd) {
-            this.pushIfInRange(occurrence, durationMs, rangeStart, rangeEnd, occurrences);
-          }
-        }
-        weekCursor = weekCursor.plus({ weeks: interval });
-      }
-    } else {
-      // 'custom' recurrence: fall back to treating as a single occurrence.
-      // Extend here with RRULE parsing (e.g. via the `rrule` package) if
-      // custom recurrence needs full RFC 5545 support in a later iteration.
-      if (rangesOverlap(event.startTime, event.endTime, rangeStart, rangeEnd)) {
-        occurrences.push({ startTime: event.startTime, endTime: event.endTime });
-      }
+    if (!rule) {
+      // 'custom' freq with no rruleString — the create/update validation
+      // schema now requires one, so this should only happen for legacy data
+      // created before that constraint existed. Falls back to a single
+      // occurrence, same as before, but now explicitly logged rather than
+      // silently done, since it genuinely means "we don't know what this
+      // recurrence is supposed to be."
+      logger.warn(
+        { eventId: event._id.toString() },
+        "Custom recurrence has no rruleString — expanding as a single occurrence",
+      );
+      return rangesOverlap(event.startTime, event.endTime, rangeStart, rangeEnd)
+        ? [{ startTime: event.startTime, endTime: event.endTime }]
+        : [];
     }
 
-    return occurrences;
+    // Query with the lower bound pulled back by one event-duration, so an
+    // occurrence that STARTS before rangeStart but still OVERLAPS into it
+    // (e.g. an overnight block spanning a day-range boundary) isn't missed —
+    // rrule's .between() only matches on occurrence start time, not full
+    // [start, end) overlap, so this widen-then-filter step restores parity
+    // with the overlap semantics the rest of the app relies on.
+    const searchStart = new Date(rangeStart.getTime() - durationMs);
+    const occurrenceStarts = rule.between(searchStart, rangeEnd, true);
+
+    return occurrenceStarts
+      .map((start) => ({ startTime: start, endTime: new Date(start.getTime() + durationMs) }))
+      .filter((o) => rangesOverlap(o.startTime, o.endTime, rangeStart, rangeEnd));
   }
 
-  private pushIfInRange(
-    occurrenceStart: DateTime,
-    durationMs: number,
-    rangeStart: Date,
-    rangeEnd: Date,
-    out: { startTime: Date; endTime: Date }[],
-  ): void {
-    const start = occurrenceStart.toJSDate();
-    const end = new Date(start.getTime() + durationMs);
-    if (rangesOverlap(start, end, rangeStart, rangeEnd)) {
-      out.push({ startTime: start, endTime: end });
+  /**
+   * Builds an RRule instance anchored to the event's own startTime as
+   * DTSTART. Returns null only when freq is 'custom' with no rruleString —
+   * every other case, including 'custom' WITH an rruleString, is fully
+   * expressible via the rrule library (monthly, yearly, BYSETPOS, etc. —
+   * anything RFC 5545 supports, not just what daily/weekly can represent).
+   */
+  private buildRRule(event: IEvent): RRule | null {
+    const { freq, interval, byDay, until, rruleString } = event.recurrence!;
+
+    if (freq === 'custom') {
+      if (!rruleString) return null;
+      try {
+        const parsed = rrulestr(rruleString, { dtstart: event.startTime });
+        return parsed instanceof RRule ? parsed : parsed.rrules()[0] ?? null;
+      } catch (err) {
+        logger.error({ err, eventId: event._id.toString(), rruleString }, 'Failed to parse custom rruleString');
+        return null;
+      }
     }
+
+    return new RRule({
+      freq: freq === 'daily' ? RRule.DAILY : RRule.WEEKLY,
+      interval,
+      dtstart: event.startTime,
+      until: until ?? null,
+      byweekday: byDay?.length
+        ? byDay.map((d) => BYDAY_TO_RRULE_WEEKDAY[d]).filter((d): d is Weekday => !!d)
+        : undefined,
+    });
   }
 
   async getEventsInRange(userId: string, from: Date, to: Date): Promise<IEvent[]> {
@@ -184,6 +215,9 @@ export class EventService {
     if (event.userId.toString() !== userId) {
       throw new AppError('NOT_OWNER', 403, 'You do not own this event');
     }
+
+    void this.cleanupGoogleCalendarIfLinked(event);
+
     await event.deleteOne();
   }
 }

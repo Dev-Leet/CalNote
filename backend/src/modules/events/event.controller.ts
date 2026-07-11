@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { eventService } from './event.service';
+import { EventModel } from '../../models/Event.model';
+import { AppError } from '../../utils/AppError';
+import { serializeEvent, serializeEvents } from '../../utils/serializers';
 
 export async function listEvents(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { from, to } = req.query as { from: string; to: string };
     const events = await eventService.getEventsInRange(req.user!.userId, new Date(from), new Date(to));
-    res.status(200).json({ events });
+    res.status(200).json({ events: serializeEvents(events) });
   } catch (err) {
     next(err);
   }
@@ -22,7 +25,7 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
       recurrence: body.recurrence,
       force: body.force,
     });
-    res.status(201).json({ event });
+    res.status(201).json({ event: serializeEvent(event) });
   } catch (err) {
     next(err);
   }
@@ -30,12 +33,11 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
 
 export async function updateEvent(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { EventModel } = await import('../../models/Event.model');
-    const { AppError } = await import('../../utils/AppError');
-
     const event = await EventModel.findById(req.params.id);
     if (!event) throw new AppError('NOT_FOUND', 404, 'Event not found');
-    if (event.userId.toString() !== req.user!.userId) throw new AppError('NOT_OWNER', 403, 'You do not own this event');
+    if (event.userId.toString() !== req.user!.userId) {
+      throw new AppError('NOT_OWNER', 403, 'You do not own this event');
+    }
 
     const body = req.body;
     if (body.title !== undefined) event.title = body.title;
@@ -44,7 +46,14 @@ export async function updateEvent(req: Request, res: Response, next: NextFunctio
     if (body.recurrence !== undefined) event.recurrence = body.recurrence;
 
     await event.save();
-    res.status(200).json({ event });
+
+    // Push the update to Google Calendar too — googleCalendar.sync.ts's
+    // pushEvent() is already idempotent (updates via event.googleCalendarEventId
+    // when present, inserts otherwise), so this correctly patches the existing
+    // GCal entry rather than creating a duplicate.
+    void eventService.syncToGoogleCalendarIfLinked(event);
+
+    res.status(200).json({ event: serializeEvent(event) });
   } catch (err) {
     next(err);
   }

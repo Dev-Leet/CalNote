@@ -1,14 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { Types } from 'mongoose';
 import { AiProviderFactory } from './AiProviderFactory';
 import { AiProviderId, SchedulingContext, CompactEvent, CompactContest } from './IAiSchedulerProvider';
 import { eventService } from '../events/event.service';
 import { ContestModel } from '../../models/Contest.model';
 import { UserModel } from '../../models/User.model';
-import { EventModel } from '../../models/Event.model';
 import { NoteModel } from '../../models/Note.model';
-import { toIST, nowInIST, fromISTStringToUTCDate } from '../../utils/timezone';
+import { toIST, nowInIST } from '../../utils/timezone';
+import { serializeEvent } from '../../utils/serializers';
+import { toEventServiceInput, wrapPlainTextAsTipTapDoc, buildContestIdSet } from './normalizeForPersistence';
 import { AppError } from '../../utils/AppError';
+import { logger } from '../../utils/logger';
 import { aiScheduleQueue } from './ai.queue';
 
 const SYNC_TIMEOUT_MS = 20_000;
@@ -34,7 +35,6 @@ export async function postAiSchedule(req: Request, res: Response, next: NextFunc
       ? new Date(dateRangeHint.to)
       : new Date(from.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-    // Gather context in parallel — Section 5.2, steps G–I.
     const [existingEventDocs, upcomingContestDocs] = await Promise.all([
       eventService.getEventsInRange(userId, from, to),
       ContestModel.find({ startTime: { $gte: new Date(), $lte: to } }).sort({ startTime: 1 }).limit(50).exec(),
@@ -47,6 +47,7 @@ export async function postAiSchedule(req: Request, res: Response, next: NextFunc
     }));
 
     const upcomingContests: CompactContest[] = upcomingContestDocs.map((c) => ({
+      id: c._id.toString(),
       name: c.name,
       platform: c.platform,
       start: toIST(c.startTime),
@@ -66,17 +67,26 @@ export async function postAiSchedule(req: Request, res: Response, next: NextFunc
     };
 
     const provider_ = AiProviderFactory.resolve(resolvedProvider);
+    const aiCallPromise = provider_.generateSchedule(context);
 
-    // Race the AI call against the sync timeout threshold (NFR-1). If it's
-    // still running when the timer fires, hand off to the async job queue
-    // instead of blocking the HTTP response indefinitely.
     const timeoutPromise = new Promise<'TIMEOUT'>((resolve) =>
       setTimeout(() => resolve('TIMEOUT'), SYNC_TIMEOUT_MS),
     );
 
-    const raceResult = await Promise.race([provider_.generateSchedule(context), timeoutPromise]);
+    const raceResult = await Promise.race([aiCallPromise, timeoutPromise]);
 
     if (raceResult === 'TIMEOUT') {
+      // The original call is still in flight and was never awaited by the
+      // caller — attach a silent catch so a late failure doesn't surface as
+      // an unhandled promise rejection. Its result (success or failure) is
+      // discarded; the queued job below performs its own independent call.
+      // NOTE: this means a timed-out request costs two AI calls, not one —
+      // acceptable for MVP, but worth revisiting if AI provider cost becomes
+      // a concern (e.g. by making providers support cancellation/AbortSignal).
+      aiCallPromise.catch((err) => {
+        logger.warn({ err, userId }, 'Abandoned AI call (already handed off to queue) failed');
+      });
+
       const job = await aiScheduleQueue.add('generate-schedule', {
         userId,
         provider: resolvedProvider,
@@ -87,35 +97,38 @@ export async function postAiSchedule(req: Request, res: Response, next: NextFunc
     }
 
     const normalized = raceResult;
-    const contestIdMap = new Map(upcomingContestDocs.map((c) => [c.name, c._id]));
+    const validContestIds = buildContestIdSet(upcomingContestDocs);
 
     const createdEvents = await Promise.all(
       normalized.events.map(async (evt) => {
-        let noteId: Types.ObjectId | undefined;
-        if (evt.notes) {
-          const note = await NoteModel.create({ userId, contentRichText: evt.notes });
-          noteId = note._id;
+        const input = toEventServiceInput(evt, validContestIds);
+
+        let noteId: string | undefined;
+        if (input.rawNoteText) {
+          const note = await NoteModel.create({
+            userId,
+            contentRichText: wrapPlainTextAsTipTapDoc(input.rawNoteText),
+          });
+          noteId = note._id.toString();
         }
 
         return eventService.createEvent({
           userId,
-          title: evt.title,
-          startTime: fromISTStringToUTCDate(evt.startTime),
-          endTime: fromISTStringToUTCDate(evt.endTime),
+          title: input.title,
+          startTime: input.startTime,
+          endTime: input.endTime,
           source: resolvedProvider === 'ashna' ? 'ai-ashna' : 'ai-custom',
-          sourceContestId: evt.sourceContestId
-            ? contestIdMap.get(evt.sourceContestId)?.toString()
-            : undefined,
-          recurrence: evt.recurrence ?? undefined,
+          sourceContestId: input.sourceContestId,
+          recurrence: input.recurrence,
           aiReasoning: normalized.reasoning,
-          noteId: noteId?.toString(),
-          force: true, // AI already reasons about conflicts per system instruction rule 1-3
+          noteId,
+          force: true, // AI already reasons about conflicts per system instruction rules 1-3
         });
       }),
     );
 
     res.status(200).json({
-      events: createdEvents,
+      events: createdEvents.map(serializeEvent),
       reasoning: normalized.reasoning,
       providerUsed: normalized.providerUsed,
     });

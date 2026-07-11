@@ -1,44 +1,32 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import apiClient from '../api/client';
+import { useContestsQuery } from '../queries/useContestsQuery';
 import { ContestList } from '../components/contests/ContestList';
 import { ContestVM } from '../components/contests/ContestCard';
+import { ContestDto } from '../types/shared';
 
-interface RawContestDto {
-  _id: string;
-  platform: string;
-  name: string;
-  startTime: string;
-  endTime: string;
-  url: string;
-  durationMinutes: number;
-}
-
-async function fetchContests(): Promise<ContestVM[]> {
-  const { data } = await apiClient.get<{ contests: RawContestDto[] }>('/contests');
-  return data.contests.map((c) => ({
-    id: c._id,
-    platform: c.platform,
-    name: c.name,
-    startTime: c.startTime,
-    endTime: c.endTime,
-    url: c.url,
-    durationMinutes: c.durationMinutes,
-  }));
+function toVM(dto: ContestDto): ContestVM {
+  return {
+    id: dto._id,
+    platform: dto.platform,
+    name: dto.name,
+    startTime: dto.startTime,
+    endTime: dto.endTime,
+    url: dto.url,
+    durationMinutes: dto.durationMinutes,
+  };
 }
 
 export function ContestsPage() {
-  const { data: contests = [], isLoading } = useQuery({
-    queryKey: ['contests'],
-    queryFn: fetchContests,
-    staleTime: 25 * 60 * 1000, // ~25 min, just under the 30-min scrape cron interval
-  });
+  // Previously this page had its own inline fetchContests + useQuery,
+  // duplicating useContestsQuery (which itself already wraps contestsApi.list
+  // with the correct ~25min staleTime). Now delegates to the shared hook.
+  const { data: contestDtos = [], isLoading } = useContestsQuery();
+  const contests = contestDtos.map(toVM);
 
   const handleScheduleAround = (contest: ContestVM) => {
-    // Intended integration point: pre-fill AiChatPanel's prompt input, e.g. via
-    // a shared Zustand "draftPrompt" store or navigation state, then route to
-    // /calendar. Left as a hook for wiring once AiChatPanel exposes a
-    // controlled prompt-input mode.
+    // Still a stub — pre-filling AiChatPanel's prompt from here needs a
+    // shared "draftPrompt" store or router state, which wasn't in scope for
+    // this refactor pass. Flagged previously; still open.
     console.log('Schedule around contest:', contest.name);
   };
 

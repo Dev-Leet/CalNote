@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { contestService } from './contest.service';
 import { triggerImmediateScrape } from './contest.cron';
+import { ContestModel } from '../../models/Contest.model';
+import { AppError } from '../../utils/AppError';
+import { serializeContest, serializeContests } from '../../utils/serializers';
 
 export async function listContests(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -10,7 +13,7 @@ export async function listContests(req: Request, res: Response, next: NextFuncti
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
     });
-    res.status(200).json({ contests });
+    res.status(200).json({ contests: serializeContests(contests) });
   } catch (err) {
     next(err);
   }
@@ -18,13 +21,11 @@ export async function listContests(req: Request, res: Response, next: NextFuncti
 
 export async function getContestById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { ContestModel } = await import('../../models/Contest.model');
     const contest = await ContestModel.findById(req.params.id).lean();
     if (!contest) {
-      const { AppError } = await import('../../utils/AppError');
       throw new AppError('NOT_FOUND', 404, 'Contest not found');
     }
-    res.status(200).json({ contest });
+    res.status(200).json({ contest: serializeContest(contest) });
   } catch (err) {
     next(err);
   }

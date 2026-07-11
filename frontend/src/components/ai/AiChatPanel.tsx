@@ -2,13 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAiScheduleMutation, NormalizedAiEventResponse } from '../../queries/useAiScheduleMutation';
 import { useAiProviderStore } from '../../stores/aiProviderStore';
 import { AiProviderSwitch } from './AiProviderSwitch';
+import { AiJobStatusIndicator } from './AiJobStatusIndicator';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
   reasoning?: string;
-  status?: 'pending' | 'error';
+  status?: 'pending' | 'error' | 'queued';
+  jobId?: string; // set when the backend responded 202 and handed off to the async queue
 }
 
 export function AiChatPanel() {
@@ -44,9 +46,14 @@ export function AiChatPanel() {
           if (result.status === 'complete') {
             replaceAssistantMessage(assistantMessageId, formatEventResponse(result.data), result.data.reasoning);
           } else {
-            replaceAssistantMessage(
-              assistantMessageId,
-              "This is taking a bit longer — I'll update this once it's ready.",
+            // 202 path: attach the jobId so AiJobStatusIndicator can take over
+            // polling and update this same message once the job resolves.
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMessageId
+                  ? { ...m, text: '', status: 'queued', jobId: result.jobId }
+                  : m,
+              ),
             );
           }
         },
@@ -65,7 +72,17 @@ export function AiChatPanel() {
 
   const replaceAssistantMessage = (id: string, text: string, reasoning?: string) => {
     setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, text, reasoning, status: undefined } : m)),
+      prev.map((m) => (m.id === id ? { ...m, text, reasoning, status: undefined, jobId: undefined } : m)),
+    );
+  };
+
+  const handleJobComplete = (messageId: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? { ...m, text: 'Schedule ready — check your calendar.', status: undefined, jobId: undefined }
+          : m,
+      ),
     );
   };
 
@@ -106,18 +123,30 @@ export function AiChatPanel() {
               maxWidth: '80%',
             }}
           >
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: '12px',
-                background: message.role === 'user' ? 'var(--color-accent-ashna)' : 'var(--color-bg-elevated)',
-                color: message.role === 'user' ? '#0B0F19' : 'var(--color-text-primary)',
-                fontSize: '14px',
-                opacity: message.status === 'pending' ? 0.7 : 1,
-              }}
-            >
-              {message.text}
-            </div>
+            {message.status === 'queued' && message.jobId ? (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  background: 'var(--color-bg-elevated)',
+                }}
+              >
+                <AiJobStatusIndicator jobId={message.jobId} onComplete={() => handleJobComplete(message.id)} />
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  background: message.role === 'user' ? 'var(--color-accent-ashna)' : 'var(--color-bg-elevated)',
+                  color: message.role === 'user' ? '#0B0F19' : 'var(--color-text-primary)',
+                  fontSize: '14px',
+                  opacity: message.status === 'pending' ? 0.7 : 1,
+                }}
+              >
+                {message.text}
+              </div>
+            )}
             {message.reasoning && (
               <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
                 {message.reasoning}

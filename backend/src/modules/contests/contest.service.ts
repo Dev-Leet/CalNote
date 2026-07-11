@@ -2,9 +2,9 @@ import { ContestModel, IContest } from '../../models/Contest.model';
 import { IContestSource } from './sources/IContestSource';
 import { codeforcesSource } from './sources/codeforces.source';
 import { leetcodeSource } from './sources/leetcode.source';
+import { codechefSource } from './sources/codechef.source';
 import { redisClient } from '../../config/redis';
 import { logger } from '../../utils/logger';
-import { codechefSource } from './sources/codechef.source';
 
 const SOURCES: IContestSource[] = [codeforcesSource, leetcodeSource, codechefSource];
 const CONTEST_CACHE_PREFIX = 'contests:list:';

@@ -1,10 +1,9 @@
 import { Queue, Worker, Job } from 'bullmq';
-import { Types } from 'mongoose';
 import { AiProviderFactory } from './AiProviderFactory';
 import { SchedulingContext, AiProviderId, NormalizedAiEventResponse } from './IAiSchedulerProvider';
 import { eventService } from '../events/event.service';
 import { NoteModel } from '../../models/Note.model';
-import { fromISTStringToUTCDate } from '../../utils/timezone';
+import { toEventServiceInput, wrapPlainTextAsTipTapDoc } from './normalizeForPersistence';
 import { logger } from '../../utils/logger';
 
 const connection = {
@@ -23,7 +22,7 @@ export const aiScheduleQueue = new Queue<AiScheduleJobData, NormalizedAiEventRes
   defaultJobOptions: {
     attempts: 2,
     backoff: { type: 'exponential', delay: 5000 },
-    removeOnComplete: { age: 3600 }, // keep completed jobs for 1hr so status polling can retrieve results
+    removeOnComplete: { age: 3600 },
     removeOnFail: { age: 86400 },
   },
 });
@@ -36,27 +35,35 @@ export const aiScheduleWorker = new Worker<AiScheduleJobData, NormalizedAiEventR
     const provider = AiProviderFactory.resolve(providerFlag);
     const normalized = await provider.generateSchedule(context);
 
-    // Persist events — mirrors the synchronous path in ai.controller.ts so
-    // both routes converge on identical side effects, regardless of which
-    // path (sync vs queued) actually handled the request.
+    // Re-derive the valid contest ID set from the SAME contest ids present
+    // in the job's original context, rather than re-querying MongoDB —
+    // context.upcomingContests already carries `id` per each CompactContest
+    // (Fix Group B), so no extra DB round-trip is needed here.
+    const validContestIds = new Set(context.upcomingContests.map((c) => c.id));
+
     await Promise.all(
       normalized.events.map(async (evt) => {
-        let noteId: Types.ObjectId | undefined;
-        if (evt.notes) {
-          const note = await NoteModel.create({ userId, contentRichText: evt.notes });
-          noteId = note._id;
+        const input = toEventServiceInput(evt, validContestIds);
+
+        let noteId: string | undefined;
+        if (input.rawNoteText) {
+          const note = await NoteModel.create({
+            userId,
+            contentRichText: wrapPlainTextAsTipTapDoc(input.rawNoteText),
+          });
+          noteId = note._id.toString();
         }
 
         return eventService.createEvent({
           userId,
-          title: evt.title,
-          startTime: fromISTStringToUTCDate(evt.startTime),
-          endTime: fromISTStringToUTCDate(evt.endTime),
+          title: input.title,
+          startTime: input.startTime,
+          endTime: input.endTime,
           source: providerFlag === 'ashna' ? 'ai-ashna' : 'ai-custom',
-          sourceContestId: evt.sourceContestId ?? undefined,
-          recurrence: evt.recurrence ?? undefined,
+          sourceContestId: input.sourceContestId,
+          recurrence: input.recurrence,
           aiReasoning: normalized.reasoning,
-          noteId: noteId?.toString(),
+          noteId,
           force: true,
         });
       }),

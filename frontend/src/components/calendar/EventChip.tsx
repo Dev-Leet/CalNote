@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
-import { CalendarEventVM } from './CalendarGrid';
+import type { CalendarEventVM } from './CalendarGrid';
 import { truncate } from '../../utils/formatters';
 
 interface EventChipProps {

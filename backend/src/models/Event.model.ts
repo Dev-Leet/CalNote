@@ -6,8 +6,15 @@ export type RecurrenceFreq = 'daily' | 'weekly' | 'custom';
 export interface IRecurrenceRule {
   freq: RecurrenceFreq;
   interval: number;
-  byDay?: string[]; // e.g. ['MO', 'TU', 'WE']
+  byDay?: string[]; // e.g. ['MO', 'TU', 'WE'] — only meaningful for 'daily' | 'weekly'
   until?: Date;
+  /**
+   * Full RFC 5545 RRULE string (e.g. "FREQ=MONTHLY;BYMONTHDAY=1;INTERVAL=2"),
+   * required when freq is 'custom'. This is what actually gives 'custom' a
+   * distinct meaning — previously it carried the exact same fields as
+   * 'weekly' and had no way to express anything weekly couldn't already.
+   */
+  rruleString?: string;
 }
 
 export interface IEvent extends Document {
@@ -32,6 +39,7 @@ const RecurrenceRuleSchema = new Schema<IRecurrenceRule>(
     interval: { type: Number, required: true, default: 1, min: 1 },
     byDay: { type: [String], default: undefined },
     until: { type: Date, default: undefined },
+    rruleString: { type: String, default: undefined },
   },
   { _id: false },
 );

@@ -1,15 +1,11 @@
-import { normalizeGeminiResponse } from '../normalizeResponse';
 import { GoogleGenAI } from '@google/genai';
 import {
   AiProvider,
   SchedulingContext,
   NormalizedAiEventResponse,
 } from '../IAiSchedulerProvider';
-import {
-  GEMINI_SYSTEM_INSTRUCTION,
-  GEMINI_RESPONSE_SCHEMA,
-  geminiEventResponseZodSchema,
-} from './gemini.prompts';
+import { GEMINI_SYSTEM_INSTRUCTION, GEMINI_RESPONSE_SCHEMA } from './gemini.prompts';
+import { normalizeGeminiResponse } from '../normalizeResponse';
 import { AppError } from '../../../utils/AppError';
 import { logger } from '../../../utils/logger';
 

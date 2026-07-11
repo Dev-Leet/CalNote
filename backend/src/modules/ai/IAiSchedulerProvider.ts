@@ -13,6 +13,7 @@ export interface CompactEvent {
 }
 
 export interface CompactContest {
+  id: string;
   name: string;
   platform: string;
   start: string; // ISO 8601, IST offset
