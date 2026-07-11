@@ -6,7 +6,7 @@ import { AppRouter } from './app/router';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import './styles/tokens.css';
 import './styles/globals.css';
-
+ 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Root element #root not found in index.html');

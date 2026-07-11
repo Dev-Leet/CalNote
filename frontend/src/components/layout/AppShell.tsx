@@ -1,9 +1,9 @@
-import React from 'react';
+
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Calendar, Trophy, StickyNote, Settings, LogOut } from 'lucide-react';
 import apiClient from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-
+ 
 const NAV_ITEMS = [
   { to: '/calendar', label: 'Calendar', icon: Calendar },
   { to: '/contests', label: 'Contests', icon: Trophy },

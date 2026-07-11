@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { UserModel } from '../../models/User.model';
+import { UserModel, IUserPreferences } from '../../models/User.model';
 import { AppError } from '../../utils/AppError';
 import { encryptField } from '../../utils/encryption';
-
+ 
 interface UpdatePreferencesBody {
   defaultAiProvider?: 'ashna' | 'custom';
   sleepWindow?: { start: string; end: string };
@@ -18,7 +18,7 @@ interface UpdatePreferencesBody {
  * Strips sensitive fields before returning preferences to the client.
  * apiKeyEncrypted is never included in any response, write-only by design.
  */
-function toPublicPreferences(prefs: any) {
+function toPublicPreferences(prefs: IUserPreferences) {
   const { customAiConfig, ...rest } = prefs;
   return {
     ...rest,

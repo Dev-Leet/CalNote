@@ -1,5 +1,6 @@
-import { AppRouter } from './router';
 
+import { AppRouter } from './router';
+ 
 /**
  * Thin composition root. QueryClientProvider and ErrorBoundary are mounted
  * one level up in main.tsx (they wrap App, not the other way around) so

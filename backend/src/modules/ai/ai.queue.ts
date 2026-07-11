@@ -1,4 +1,5 @@
 import { Queue, Worker, Job } from 'bullmq';
+import IORedis from 'ioredis';
 import { AiProviderFactory } from './AiProviderFactory';
 import { SchedulingContext, AiProviderId, NormalizedAiEventResponse } from './IAiSchedulerProvider';
 import { eventService } from '../events/event.service';
@@ -6,10 +7,27 @@ import { NoteModel } from '../../models/Note.model';
 import { toEventServiceInput, wrapPlainTextAsTipTapDoc } from './normalizeForPersistence';
 import { logger } from '../../utils/logger';
 
-const connection = {
+/**
+ * BullMQ's default (and recommended) Redis backend is ioredis, not the
+ * `redis` package — the earlier `{host, port}` plain object was implicitly
+ * accepted by BullMQ's own ioredis-based connection handling, but as of
+ * bullmq@5.80 the library declares an explicit peer dependency on
+ * redis@>=5.0.0 *only for its optional node-redis adapter path*, which this
+ * app never uses. Rather than bump the app's `redis` package to v5 (a
+ * breaking change for config/redis.ts's caching/OAuth-state usage, which is
+ * unrelated to BullMQ), this creates an explicit ioredis client instead —
+ * the dependency BullMQ actually wants for the adapter path it's already on.
+ *
+ * maxRetriesPerRequest: null is REQUIRED by BullMQ for Worker/QueueEvents
+ * connections — it throws an explicit startup error otherwise, since workers
+ * need to retry indefinitely rather than give up after ioredis's default
+ * retry budget.
+ */
+const connection = new IORedis({
   host: process.env.REDIS_HOST ?? 'localhost',
   port: Number(process.env.REDIS_PORT ?? 6379),
-};
+  maxRetriesPerRequest: null,
+});
 
 export interface AiScheduleJobData {
   userId: string;

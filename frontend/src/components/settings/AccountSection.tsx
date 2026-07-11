@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import apiClient from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-
+ 
 export function AccountSection() {
   const user = useAuthStore((s) => s.user);
   const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);

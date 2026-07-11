@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
-
+ 
 /**
  * Per HLD Section 1.5: rate limiting applied specifically to auth and AI
  * scheduling endpoints, since these are the most expensive (cost/compute

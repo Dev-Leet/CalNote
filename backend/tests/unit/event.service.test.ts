@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import mongoose, { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { EventService } from '../../src/modules/events/event.service';
 import { EventModel, IEvent } from '../../src/models/Event.model';
 import { AppError } from '../../src/utils/AppError';
-
+ 
 vi.mock('../../src/models/Event.model', () => ({
   EventModel: {
     find: vi.fn(),
@@ -22,11 +22,11 @@ describe('EventService', () => {
 
   describe('checkConflicts', () => {
     it('returns hasConflict: false when no overlapping events exist', async () => {
-      (EventModel.find as any).mockReturnValue({
+      vi.mocked(EventModel.find).mockReturnValue({
         select: vi.fn().mockReturnValue({
           lean: vi.fn().mockResolvedValue([]),
         }),
-      });
+      } as never);
 
       const userId = new Types.ObjectId().toString();
       const result = await eventService.checkConflicts(
@@ -41,7 +41,7 @@ describe('EventService', () => {
 
     it('detects a genuine overlap and returns the conflicting event id', async () => {
       const conflictingId = new Types.ObjectId();
-      (EventModel.find as any).mockReturnValue({
+      vi.mocked(EventModel.find).mockReturnValue({
         select: vi.fn().mockReturnValue({
           lean: vi.fn().mockResolvedValue([
             {
@@ -51,7 +51,7 @@ describe('EventService', () => {
             },
           ]),
         }),
-      });
+      } as never);
 
       const userId = new Types.ObjectId().toString();
       const result = await eventService.checkConflicts(
@@ -65,13 +65,13 @@ describe('EventService', () => {
     });
 
     it('does not flag adjacent (touching, non-overlapping) events as conflicts', async () => {
-      (EventModel.find as any).mockReturnValue({
+      vi.mocked(EventModel.find).mockReturnValue({
         select: vi.fn().mockReturnValue({
           // endTime === proposed startTime — a real DB query with $lt/$gt would
           // already exclude this, but we test the in-memory rangesOverlap guard too
           lean: vi.fn().mockResolvedValue([]),
         }),
-      });
+      } as never);
 
       const userId = new Types.ObjectId().toString();
       const result = await eventService.checkConflicts(
@@ -100,7 +100,7 @@ describe('EventService', () => {
 
     it('throws CONFLICT_DETECTED when overlap exists and force is not set', async () => {
       const conflictingId = new Types.ObjectId();
-      (EventModel.find as any).mockReturnValue({
+      vi.mocked(EventModel.find).mockReturnValue({
         select: vi.fn().mockReturnValue({
           lean: vi.fn().mockResolvedValue([
             {
@@ -110,7 +110,7 @@ describe('EventService', () => {
             },
           ]),
         }),
-      });
+      } as never);
 
       const userId = new Types.ObjectId().toString();
 
@@ -127,7 +127,7 @@ describe('EventService', () => {
     it('bypasses conflict check and creates the event when force is true', async () => {
       const userId = new Types.ObjectId().toString();
       const createdDoc = { _id: new Types.ObjectId(), title: 'Forced event' } as IEvent;
-      (EventModel.create as any).mockResolvedValue(createdDoc);
+      vi.mocked(EventModel.create).mockResolvedValue(createdDoc as never);
 
       const result = await eventService.createEvent({
         userId,

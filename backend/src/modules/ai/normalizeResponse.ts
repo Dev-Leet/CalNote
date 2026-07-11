@@ -2,7 +2,7 @@ import { geminiEventResponseZodSchema } from './providers/gemini.prompts';
 import { NormalizedAiEventResponse } from './IAiSchedulerProvider';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
-
+ 
 /**
  * Parses and validates raw Gemini JSON text into a NormalizedAiEventResponse.
  * Isolated here (rather than as a private GeminiAiService method) so it can
@@ -25,7 +25,25 @@ export function normalizeGeminiResponse(rawText: string): NormalizedAiEventRespo
   }
 
   return {
-    events: validated.data.events,
+    // Explicit mapping rather than a direct assignment — Zod's schema allows
+    // `null` for byDay/until/notes/sourceContestId (from .nullable()), but
+    // NormalizedAiEvent only allows `undefined` for those fields. This
+    // normalizes null -> undefined at the one place both shapes meet.
+    events: validated.data.events.map((e) => ({
+      title: e.title,
+      startTime: e.startTime,
+      endTime: e.endTime,
+      recurrence: e.recurrence
+        ? {
+            freq: e.recurrence.freq,
+            interval: e.recurrence.interval,
+            byDay: e.recurrence.byDay ?? undefined,
+            until: e.recurrence.until ?? undefined,
+          }
+        : undefined,
+      notes: e.notes ?? undefined,
+      sourceContestId: e.sourceContestId ?? undefined,
+    })),
     reasoning: validated.data.reasoning,
     providerUsed: 'custom',
   };

@@ -1,8 +1,8 @@
-import React from 'react';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../api/client';
 import { CalendarEventVM } from './CalendarGrid';
-
+ 
 interface EventDetailPopoverProps {
   event: CalendarEventVM | null;
   onClose: () => void;

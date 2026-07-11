@@ -1,10 +1,11 @@
-import { ContestModel, IContest } from '../../models/Contest.model';
+import { ContestModel } from '../../models/Contest.model';
 import { IContestSource } from './sources/IContestSource';
 import { codeforcesSource } from './sources/codeforces.source';
 import { leetcodeSource } from './sources/leetcode.source';
 import { codechefSource } from './sources/codechef.source';
 import { redisClient } from '../../config/redis';
 import { logger } from '../../utils/logger';
+import { ContestLike } from '../../utils/serializers';
 
 const SOURCES: IContestSource[] = [codeforcesSource, leetcodeSource, codechefSource];
 const CONTEST_CACHE_PREFIX = 'contests:list:';
@@ -92,13 +93,23 @@ export class ContestService {
     }
   }
 
-  async getContests(filters: ContestQueryFilters): Promise<IContest[]> {
+  async getContests(filters: ContestQueryFilters): Promise<ContestLike[]> {
     const cacheKey = `${CONTEST_CACHE_PREFIX}${filters.platform ?? 'all'}:${filters.from?.toISOString() ?? ''}:${filters.to?.toISOString() ?? ''}`;
 
     try {
       const cached = await redisClient.get(cacheKey);
       if (cached) {
-        return JSON.parse(cached) as IContest[];
+        // JSON.parse returns `any`, so this cast is safe — but the parsed
+        // startTime/endTime are still ISO STRINGS at this point (JSON has
+        // no Date type), not real Date objects. This was silently producing
+        // invalid DateTime output from toIST() on every cache-hit response
+        // until this fix — rehydrate them explicitly before returning.
+        const rawCached = JSON.parse(cached) as ContestLike[];
+        return rawCached.map((c) => ({
+          ...c,
+          startTime: new Date(c.startTime),
+          endTime: new Date(c.endTime),
+        }));
       }
     } catch (err) {
       logger.warn({ err }, 'Contest cache read failed, falling back to DB');
@@ -113,15 +124,17 @@ export class ContestService {
       };
     }
 
+    // .lean() results structurally satisfy ContestLike (same field shapes,
+    // extra Mongoose metadata is harmless on a return value) — no cast needed.
     const contests = await ContestModel.find(query).sort({ startTime: 1 }).limit(200).lean().exec();
 
     try {
-      await redisClient.set(cacheKey, JSON.stringify(contests), { EX: 30 * 60 }); // 30-min TTL, matches cron interval
+      await redisClient.set(cacheKey, JSON.stringify(contests), { EX: 30 * 60 });
     } catch (err) {
       logger.warn({ err }, 'Contest cache write failed');
     }
 
-    return contests as IContest[];
+    return contests;
   }
 }
 

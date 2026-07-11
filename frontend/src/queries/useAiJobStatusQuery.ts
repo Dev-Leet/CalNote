@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { aiApi, AiJobStatusResponse } from '../api/ai.api';
-
+ 
 /**
  * Polls the async AI scheduling job status endpoint with backoff, for the
  * Custom AI Agent's queued path (Section 5.2 notes: sync timeout ~20s).
@@ -15,8 +15,9 @@ export function useAiJobStatusQuery(jobId: string | null) {
     queryKey: ['ai-job-status', jobId],
     queryFn: () => aiApi.getJobStatus(jobId as string),
     enabled: !!jobId,
-    refetchInterval: (data) => {
-      if (!data || data.status === 'pending') return 2000;
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status || status === 'pending') return 2000;
       return false;
     },
   });

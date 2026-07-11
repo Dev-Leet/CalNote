@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { ContestCard, ContestVM } from './ContestCard';
-
+ 
 interface ContestListProps {
   contests: ContestVM[];
   isLoading?: boolean;

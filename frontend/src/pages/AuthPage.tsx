@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
-
+ 
 type Mode = 'login' | 'register';
 
 interface AuthResponse {
@@ -30,8 +31,11 @@ export function AuthPage() {
       const { data } = await apiClient.post<AuthResponse>(endpoint, { email, password });
       setSession(data.user, data.accessToken);
       navigate('/calendar', { replace: true });
-    } catch (err: any) {
-      const message = err?.response?.data?.message ?? 'Something went wrong. Please try again.';
+    } catch (err) {
+      let message = 'Something went wrong. Please try again.';
+      if (axios.isAxiosError(err)) {
+        message = (err.response?.data as { message?: string } | undefined)?.message ?? message;
+      }
       setError(message);
     } finally {
       setIsSubmitting(false);

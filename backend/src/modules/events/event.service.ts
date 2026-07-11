@@ -179,7 +179,19 @@ export class EventService {
       if (!rruleString) return null;
       try {
         const parsed = rrulestr(rruleString, { dtstart: event.startTime });
-        return parsed instanceof RRule ? parsed : parsed.rrules()[0] ?? null;
+
+        if (parsed instanceof RRule) {
+          return parsed;
+        }
+
+        // Not an RRule instance -> it's an RRuleSet (a multi-rule container,
+        // e.g. when the RFC string includes EXRULE/RDATE lines). RRuleSet
+        // also exposes .rrules() at runtime; sidestepping the library's
+        // exact overload typing here with a narrow, explicit cast rather
+        // than relying on ternary-based type narrowing, which TS resolved
+        // to `never` for this call shape.
+        const asRuleSet = parsed as unknown as { rrules: () => RRule[] };
+        return asRuleSet.rrules()[0] ?? null;
       } catch (err) {
         logger.error({ err, eventId: event._id.toString(), rruleString }, 'Failed to parse custom rruleString');
         return null;

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CalendarGrid, CalendarEventVM } from '../components/calendar/CalendarGrid';
 import { AiChatPanel } from '../components/ai/AiChatPanel';
 import { SlotInfo } from 'react-big-calendar';
-
+ 
 export function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventVM | null>(null);
 

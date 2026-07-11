@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useContestsQuery } from '../queries/useContestsQuery';
 import { ContestList } from '../components/contests/ContestList';
 import { ContestVM } from '../components/contests/ContestCard';

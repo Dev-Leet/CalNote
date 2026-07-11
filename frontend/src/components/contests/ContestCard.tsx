@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-
+import { useEffect, useState } from 'react';
+ 
 export interface ContestVM {
   id: string;
   platform: string;
@@ -70,7 +70,7 @@ export function ContestCard({ contest, onScheduleAround }: ContestCardProps) {
         <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{countdown}</span>
       </div>
 
-      
+      <a
         href={contest.url}
         target="_blank"
         rel="noreferrer"

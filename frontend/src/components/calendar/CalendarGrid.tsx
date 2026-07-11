@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { Calendar, dateFnsLocalizer, View, SlotInfo } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enIN } from 'date-fns/locale';
@@ -6,7 +6,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useEventsQuery } from '../../queries/useEventsQuery';
 import { EventChip } from './EventChip';
 import { EventDto } from '../../types/shared';
-
+ 
 export interface CalendarEventVM {
   id: string;
   title: string;

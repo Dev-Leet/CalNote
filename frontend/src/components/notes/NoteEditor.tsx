@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CodeBlock from '@tiptap/extension-code-block';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../api/client';
-
+ 
 interface NoteEditorProps {
   noteId?: string;         // undefined = creating a new note
   eventId?: string;        // optional link to a parent event

@@ -1,6 +1,23 @@
 import { IEvent } from '../models/Event.model';
-import { IContest } from '../models/Contest.model';
 import { toIST } from './timezone';
+import { Types } from 'mongoose';
+
+/**
+ * The minimal shape serializeContest actually needs — deliberately NOT
+ * IContest (a full Mongoose Document). This lets both hydrated documents
+ * AND .lean() query results (which lack Document methods) satisfy it via
+ * plain structural typing, with no cast required at either call site.
+ */
+export interface ContestLike {
+  _id: Types.ObjectId;
+  platform: string;
+  externalId: string;
+  name: string;
+  startTime: Date;
+  endTime: Date;
+  url: string;
+  durationMinutes: number;
+}
 
 /**
  * Converts a hydrated Event document into its wire-format DTO: ObjectIds as
@@ -41,7 +58,7 @@ export function serializeEvents(events: IEvent[]) {
  * contest.service.ts's getContests() returns lean results, which have no
  * Document methods, so this can't assume `.toObject()` exists.
  */
-export function serializeContest(contest: IContest) {
+export function serializeContest(contest: ContestLike) {
   return {
     _id: contest._id.toString(),
     platform: contest.platform,
@@ -54,6 +71,6 @@ export function serializeContest(contest: IContest) {
   };
 }
 
-export function serializeContests(contests: IContest[]) {
+export function serializeContests(contests: ContestLike[]) {
   return contests.map(serializeContest);
 }

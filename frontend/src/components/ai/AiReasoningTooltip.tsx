@@ -1,6 +1,6 @@
-import React from 'react';
-import { Sparkles } from 'lucide-react';
 
+import { Sparkles } from 'lucide-react';
+ 
 interface AiReasoningTooltipProps {
   reasoning: string;
   providerLabel?: string;

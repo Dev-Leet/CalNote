@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface PlatformFilterBarProps {
   platforms: string[]; // includes 'all' as the first entry

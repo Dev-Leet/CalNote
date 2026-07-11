@@ -1,7 +1,7 @@
-import React from 'react';
+
 import { NoteDto } from '../../types/shared';
 import { formatISTDate } from '../../utils/formatters';
-
+ 
 interface NotesListProps {
   notes: NoteDto[];
   activeNoteId: string | 'new' | null;
@@ -9,10 +9,16 @@ interface NotesListProps {
   onDelete: (noteId: string) => void;
 }
 
+interface TipTapNode {
+  type?: string;
+  text?: string;
+  content?: TipTapNode[];
+}
+
 function extractPreview(contentRichText: string): string {
   try {
-    const parsed = JSON.parse(contentRichText);
-    const walk = (node: any): string => {
+    const parsed = JSON.parse(contentRichText) as TipTapNode;
+    const walk = (node: TipTapNode | undefined): string => {
       if (!node) return '';
       if (node.type === 'text') return node.text ?? '';
       if (Array.isArray(node.content)) return node.content.map(walk).join(' ');

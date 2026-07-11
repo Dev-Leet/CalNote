@@ -1,7 +1,7 @@
-import React from 'react';
+
 import { NavLink } from 'react-router-dom';
 import { Calendar, Trophy, StickyNote, Settings, LogOut } from 'lucide-react';
-
+ 
 const NAV_ITEMS = [
   { to: '/calendar', label: 'Calendar', icon: Calendar },
   { to: '/contests', label: 'Contests', icon: Trophy },
