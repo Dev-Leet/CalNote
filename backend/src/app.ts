@@ -8,6 +8,7 @@ import eventRoutes from './modules/events/event.routes';
 import contestRoutes from './modules/contests/contest.routes';
 import notesRoutes from './modules/notes/notes.routes';
 import aiRoutes from './modules/ai/ai.routes';
+import { errorHandler } from './middleware/errorHandler.middleware';
 import { AppError } from './utils/AppError';
 import { logger } from './utils/logger';
 
@@ -41,15 +42,7 @@ export function createApp(): Express {
   });
 
   // Central error-normalization middleware — must be registered last.
-  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({ code: err.code, message: err.message, details: err.details });
-      return;
-    }
-
-    logger.error({ err }, 'Unhandled error');
-    res.status(500).json({ code: 'INTERNAL_SERVER_ERROR', message: 'Something went wrong' });
-  });
+  app.use(errorHandler);
 
   return app;
 }
