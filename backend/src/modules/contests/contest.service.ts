@@ -4,8 +4,9 @@ import { codeforcesSource } from './sources/codeforces.source';
 import { leetcodeSource } from './sources/leetcode.source';
 import { redisClient } from '../../config/redis';
 import { logger } from '../../utils/logger';
+import { codechefSource } from './sources/codechef.source';
 
-const SOURCES: IContestSource[] = [codeforcesSource, leetcodeSource];
+const SOURCES: IContestSource[] = [codeforcesSource, leetcodeSource, codechefSource];
 const CONTEST_CACHE_PREFIX = 'contests:list:';
 
 export interface ScrapeCycleResult {
