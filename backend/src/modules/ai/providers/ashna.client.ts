@@ -33,7 +33,8 @@ export interface AshnaRawResponse {
 
 class AshnaSdkClient {
   private readonly apiKey = process.env.ASHNA_API_KEY;
-  private readonly baseUrl = process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1';
+  private readonly baseUrl = process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1/api';
+  private readonly modelId = process.env.ASHNA_MODEL_ID ?? '6a4e9b901b559fe5ca09a268';
 
   async schedule(req: AshnaScheduleRequest): Promise<AshnaRawResponse> {
     if (!this.apiKey) {
@@ -58,3 +59,5 @@ class AshnaSdkClient {
 }
 
 export const ashnaSdkClient = new AshnaSdkClient();
+
+

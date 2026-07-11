@@ -19,7 +19,7 @@ function estimatePromptComplexity(prompt: string, contestCount: number): 'simple
 }
 
 function selectGeminiModel(complexity: 'simple' | 'complex'): string {
-  return complexity === 'complex' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+  return complexity === 'complex' ? 'gemini-2.5-pro' : 'gemini-3.5-flash';
 }
 
 function buildGeminiContents(context: SchedulingContext): string {
