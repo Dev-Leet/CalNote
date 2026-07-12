@@ -1,8 +1,4 @@
-/**
- * Placeholder Ashna AI SDK client wrapper. Replace the internals of `schedule()`
- * with the actual Ashna SDK call once credentials/SDK are available — the shape
- * of AshnaRawResponse below is what AshnaAiService.mapAshnaResponse() expects.
- */
+import OpenAI from 'openai';
 
 export interface AshnaScheduleRequest {
   prompt: string;
@@ -32,32 +28,56 @@ export interface AshnaRawResponse {
 }
 
 class AshnaSdkClient {
-  private readonly apiKey = process.env.ASHNA_API_KEY;
-  private readonly baseUrl = process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1/api';
+  private openai: OpenAI;
   private readonly modelId = process.env.ASHNA_MODEL_ID ?? '6a4e9b901b559fe5ca09a268';
 
-  async schedule(req: AshnaScheduleRequest): Promise<AshnaRawResponse> {
-    if (!this.apiKey) {
-      throw new Error('ASHNA_API_KEY environment variable is not defined');
-    }
+  constructor() {
+    // Initialize the OpenAI SDK with Ashna's base URL and your API key
+    this.openai = new OpenAI({
+      apiKey: process.env.ASHNA_API_KEY, 
+      baseURL: process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1/api',
+    });
+  }
 
-    const res = await fetch(`${this.baseUrl}/schedule`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(req),
+  async schedule(req: AshnaScheduleRequest): Promise<AshnaRawResponse> {
+    // Provide a system prompt to strictly enforce the expected JSON structure
+    const systemPrompt = `You are an AI scheduling assistant. 
+    Analyze the user's prompt, current time, and provided context (events, contests, and sleep window) to create an optimized schedule.
+    Respond ONLY with valid JSON matching this exact structure:
+    {
+      "scheduledItems": [
+        {
+          "label": "string",
+          "startsAt": "ISO date string",
+          "endsAt": "ISO date string",
+          "repeatRule": { "freq": "daily|weekly|custom", "interval": 1 },
+          "note": "string",
+          "linkedContestId": "string"
+        }
+      ],
+      "explanation": "string"
+    }`;
+
+    // Use the OpenAI-compatible chat completions endpoint
+    const response = await this.openai.chat.completions.create({
+      model: this.modelId,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: JSON.stringify(req, null, 2) }
+      ],
+      // Enforce JSON output shape
+      response_format: { type: 'json_object' },
     });
 
-    if (!res.ok) {
-      throw new Error(`Ashna AI SDK returned status ${res.status}`);
+    const content = response.choices[0]?.message?.content;
+    
+    if (!content) {
+      throw new Error('Ashna AI returned an empty response');
     }
 
-    return (await res.json()) as AshnaRawResponse;
+    // Parse and return the structured response
+    return JSON.parse(content) as AshnaRawResponse;
   }
 }
 
 export const ashnaSdkClient = new AshnaSdkClient();
-
-
