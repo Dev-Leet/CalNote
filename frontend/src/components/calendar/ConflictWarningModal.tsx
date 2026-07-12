@@ -3,7 +3,7 @@ import React from 'react';
 export interface ConflictingEventSummary {
   id: string;
   title: string;
-  startTime: string; // IST ISO string
+  startTime: string;
   endTime: string;
 }
 
@@ -14,11 +14,6 @@ interface ConflictWarningModalProps {
   onProceedAnyway: () => void;
 }
 
-/**
- * FR-4.2: surfaces a non-blocking warning when a new/edited event overlaps
- * existing event(s) — including contest blocks, which are the highest-stakes
- * case (e.g. accidentally scheduling practice over a live round).
- */
 export function ConflictWarningModal({ isOpen, conflicts, onCancel, onProceedAnyway }: ConflictWarningModalProps) {
   if (!isOpen) return null;
 
@@ -27,49 +22,24 @@ export function ConflictWarningModal({ isOpen, conflicts, onCancel, onProceedAny
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="conflict-modal-title"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(11, 15, 25, 0.65)',
-        zIndex: 1000,
-      }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/65"
       onClick={onCancel}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '420px',
-          padding: '24px',
-          borderRadius: '16px',
-          background: 'var(--color-bg-surface)',
-          borderTop: '4px solid var(--color-warning)',
-        }}
+        className="w-[420px] rounded-lg border-t-4 border-warning bg-bg-surface p-6"
       >
-        <h2 id="conflict-modal-title" style={{ color: 'var(--color-text-primary)', fontSize: '17px', margin: '0 0 8px' }}>
+        <h2 id="conflict-modal-title" className="mb-2 mt-0 text-[17px] text-text-primary">
           This overlaps {conflicts.length === 1 ? 'an existing event' : `${conflicts.length} existing events`}
         </h2>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginBottom: '16px' }}>
-          Scheduling here will overlap the following:
-        </p>
+        <p className="mb-4 text-[13px] text-text-secondary">Scheduling here will overlap the following:</p>
 
-        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <ul className="m-0 mb-5 flex list-none flex-col gap-2 p-0">
           {conflicts.map((c) => (
-            <li
-              key={c.id}
-              style={{
-                padding: '10px 12px',
-                borderRadius: '8px',
-                background: 'var(--color-bg-elevated)',
-                fontSize: '13px',
-                color: 'var(--color-text-primary)',
-              }}
-            >
+            <li key={c.id} className="rounded-md bg-bg-elevated px-3 py-2.5 text-[13px] text-text-primary">
               <strong>{c.title}</strong>
               <br />
-              <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+              <span className="text-xs text-text-secondary">
                 {new Date(c.startTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} &ndash;{' '}
                 {new Date(c.endTime).toLocaleTimeString('en-IN', { timeStyle: 'short' })}
               </span>
@@ -77,11 +47,19 @@ export function ConflictWarningModal({ isOpen, conflicts, onCancel, onProceedAny
           ))}
         </ul>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onCancel} style={secondaryButtonStyle}>
+        <div className="flex justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-pill bg-bg-elevated px-4 py-2 text-[13px] text-text-primary"
+          >
             Cancel
           </button>
-          <button type="button" onClick={onProceedAnyway} style={dangerButtonStyle}>
+          <button
+            type="button"
+            onClick={onProceedAnyway}
+            className="rounded-pill bg-danger px-4 py-2 text-[13px] font-semibold text-bg-primary"
+          >
             Schedule Anyway
           </button>
         </div>
@@ -89,26 +67,5 @@ export function ConflictWarningModal({ isOpen, conflicts, onCancel, onProceedAny
     </div>
   );
 }
-
-const secondaryButtonStyle: React.CSSProperties = {
-  padding: '8px 16px',
-  borderRadius: '9999px',
-  border: 'none',
-  background: 'var(--color-bg-elevated)',
-  color: 'var(--color-text-primary)',
-  fontSize: '13px',
-  cursor: 'pointer',
-};
-
-const dangerButtonStyle: React.CSSProperties = {
-  padding: '8px 16px',
-  borderRadius: '9999px',
-  border: 'none',
-  background: 'var(--color-danger)',
-  color: '#0B0F19',
-  fontWeight: 600,
-  fontSize: '13px',
-  cursor: 'pointer',
-};
 
 export default ConflictWarningModal;

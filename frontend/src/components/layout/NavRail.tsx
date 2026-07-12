@@ -17,56 +17,31 @@ interface NavRailProps {
 
 export function NavRail({ onLogout, userEmail }: NavRailProps) {
   return (
-    <nav
-      style={{
-        width: '72px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '20px 0',
-        borderRight: '1px solid var(--color-bg-elevated)',
-        gap: '8px',
-      }}
-    >
+    <nav className="flex w-[72px] flex-col items-center gap-2 border-r border-border-subtle py-5">
       {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
           to={to}
           title={label}
-          style={({ isActive }) => ({
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            color: isActive ? '#0B0F19' : 'var(--color-text-secondary)',
-            background: isActive ? 'var(--color-accent-ashna)' : 'transparent',
-            textDecoration: 'none',
-          })}
+          className={({ isActive }) =>
+            `flex h-11 w-11 items-center justify-center rounded-md transition-colors ${
+              isActive
+                ? 'bg-accent-ashna text-bg-primary'
+                : 'text-text-secondary hover:bg-bg-elevated'
+            }`
+          }
         >
           <Icon size={20} />
         </NavLink>
       ))}
 
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
 
       <button
         type="button"
         onClick={onLogout}
         title={userEmail ? `Log out (${userEmail})` : 'Log out'}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '44px',
-          height: '44px',
-          borderRadius: '12px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--color-text-secondary)',
-          cursor: 'pointer',
-        }}
+        className="flex h-11 w-11 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-bg-elevated"
       >
         <LogOut size={20} />
       </button>

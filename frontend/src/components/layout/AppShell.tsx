@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
@@ -20,15 +20,15 @@ export function AppShell() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--color-bg-primary)' }}>
+    <div className="flex h-screen bg-bg-primary">
       <NavRail onLogout={handleLogout} userEmail={user?.email} />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '14px 24px 0' }}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex justify-end px-6 pt-3.5">
           <ThemeToggle />
         </div>
 
-        <main style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+        <main className="flex-1 overflow-auto p-6">
           <Outlet />
         </main>
       </div>

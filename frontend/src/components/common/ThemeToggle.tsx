@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useThemeStore } from '../../stores/themeStore';
 
@@ -14,42 +14,21 @@ export function ThemeToggle() {
       aria-checked={isDark}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
       onClick={toggleMode}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 10px',
-        borderRadius: 'var(--radius-pill)',
-        border: `1px solid var(--color-border-subtle)`,
-        background: 'var(--color-bg-elevated)',
-        cursor: 'pointer',
-      }}
+      className="flex items-center gap-2 rounded-pill border border-border-subtle bg-bg-elevated px-2.5 py-1.5"
     >
-      <Sun size={14} style={{ color: isDark ? 'var(--color-text-secondary)' : 'var(--color-warning)' }} />
+      <Sun size={14} className={isDark ? 'text-text-secondary' : 'text-warning'} />
       <span
-        style={{
-          position: 'relative',
-          width: '34px',
-          height: '18px',
-          borderRadius: 'var(--radius-pill)',
-          background: isDark ? 'var(--color-accent-ashna)' : 'var(--color-border-subtle)',
-          transition: 'background 150ms ease',
-        }}
+        className={`relative h-[18px] w-[34px] rounded-pill transition-colors ${
+          isDark ? 'bg-accent-ashna' : 'bg-border-subtle'
+        }`}
       >
         <span
-          style={{
-            position: 'absolute',
-            top: '2px',
-            left: isDark ? '18px' : '2px',
-            width: '14px',
-            height: '14px',
-            borderRadius: '50%',
-            background: '#FFFFFF',
-            transition: 'left 150ms ease',
-          }}
+          className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white transition-all ${
+            isDark ? 'left-[18px]' : 'left-0.5'
+          }`}
         />
       </span>
-      <Moon size={14} style={{ color: isDark ? 'var(--color-accent-ashna)' : 'var(--color-text-secondary)' }} />
+      <Moon size={14} className={isDark ? 'text-accent-ashna' : 'text-text-secondary'} />
     </button>
   );
 }

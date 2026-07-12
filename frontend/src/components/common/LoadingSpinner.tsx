@@ -1,3 +1,4 @@
+import React from 'react';
 
 interface LoadingSpinnerProps {
   size?: number;
@@ -5,41 +6,18 @@ interface LoadingSpinnerProps {
   fullHeight?: boolean;
 }
 
-/**
- * Reusable loading indicator. Replaces the ad hoc "Loading…" text strings
- * scattered across CalendarGrid, ContestList, SettingsPage, etc.
- */
 export function LoadingSpinner({ size = 24, label, fullHeight = false }: LoadingSpinnerProps) {
   return (
     <div
       role="status"
       aria-live="polite"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '10px',
-        padding: '24px',
-        height: fullHeight ? '100%' : undefined,
-      }}
+      className={`flex flex-col items-center justify-center gap-2.5 p-6 ${fullHeight ? 'h-full' : ''}`}
     >
       <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          border: `2px solid var(--color-bg-elevated)`,
-          borderTopColor: 'var(--color-accent-ashna)',
-          animation: 'cp-spin 0.7s linear infinite',
-        }}
+        className="animate-spin rounded-full border-2 border-bg-elevated border-t-accent-ashna"
+        style={{ width: size, height: size }}
       />
-      {label && <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{label}</span>}
-      <style>{`
-        @keyframes cp-spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      {label && <span className="text-xs text-text-secondary">{label}</span>}
     </div>
   );
 }

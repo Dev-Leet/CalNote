@@ -1,51 +1,54 @@
-import {
-  AiProvider,
-  SchedulingContext,
-  NormalizedAiEventResponse,
-  NormalizedAiEvent,
-} from '../IAiSchedulerProvider';
-import { ashnaSdkClient, AshnaRawResponse } from './ashna.client';
+import { AiProvider, SchedulingContext, NormalizedAiEventResponse } from '../IAiSchedulerProvider';
+import { ashnaClient } from './ashna.client';
+import { ASHNA_CALENDAR_SYSTEM_PROMPT } from './ashna.prompts';
+import { normalizeAshnaResponse } from '../normalizeAshnaResponse';
 import { AppError } from '../../../utils/AppError';
 import { logger } from '../../../utils/logger';
+
+const ASHNA_CALENDAR_MODEL_ID = process.env.ASHNA_CALENDAR_MODEL_ID as string;
 
 export class AshnaAiService implements AiProvider {
   readonly providerId = 'ashna' as const;
 
   async generateSchedule(context: SchedulingContext): Promise<NormalizedAiEventResponse> {
-    let rawResponse: AshnaRawResponse;
+    if (!ASHNA_CALENDAR_MODEL_ID) {
+      throw new AppError('AI_PROVIDER_UNAVAILABLE', 422, 'ASHNA_CALENDAR_MODEL_ID is not configured');
+    }
 
+    const userPayload = JSON.stringify({
+      userRequest: context.prompt,
+      currentDateTimeIST: context.currentDateTimeIST,
+      sleepWindow: context.preferences.sleepWindow,
+      existingEvents: context.existingEvents,
+      upcomingContests: context.upcomingContests,
+    });
+
+    let response;
     try {
-      rawResponse = await ashnaSdkClient.schedule({
-        prompt: context.prompt,
-        currentDateTimeIST: context.currentDateTimeIST,
-        context: {
-          events: context.existingEvents,
-          contests: context.upcomingContests,
-          sleepWindow: context.preferences.sleepWindow,
-        },
+      response = await ashnaClient.chatCompletion({
+        model: ASHNA_CALENDAR_MODEL_ID,
+        messages: [
+          { role: 'system', content: ASHNA_CALENDAR_SYSTEM_PROMPT },
+          { role: 'user', content: userPayload },
+        ],
+        temperature: 0.3, // precision task, not creative writing — matches Gemini's setting
+        max_tokens: 1024,
       });
     } catch (err) {
-      logger.error({ err, userId: context.userId }, 'Ashna AI SDK call failed');
+      logger.error({ err, userId: context.userId }, 'Ashna AI chat completion request failed');
       throw new AppError('AI_PROVIDER_ERROR', 502, 'Ashna AI request failed');
     }
 
-    return this.mapAshnaResponse(rawResponse);
-  }
+    logger.info(
+      { usage: response.usage, model: ASHNA_CALENDAR_MODEL_ID, userId: context.userId },
+      'Ashna schedule request completed',
+    );
 
-  private mapAshnaResponse(raw: AshnaRawResponse): NormalizedAiEventResponse {
-    const events: NormalizedAiEvent[] = raw.scheduledItems.map((item) => ({
-      title: item.label,
-      startTime: item.startsAt,
-      endTime: item.endsAt,
-      recurrence: item.repeatRule ?? null,
-      notes: item.note ?? null,
-      sourceContestId: item.linkedContestId ?? null,
-    }));
+    const content = response.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new AppError('AI_PROVIDER_ERROR', 502, 'Ashna AI returned an empty response');
+    }
 
-    return {
-      events,
-      reasoning: raw.explanation,
-      providerUsed: 'ashna',
-    };
+    return normalizeAshnaResponse(content);
   }
 }

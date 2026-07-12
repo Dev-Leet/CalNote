@@ -2,8 +2,9 @@ import { NOTES_AI_SYSTEM_PROMPT, buildNotesAiUserMessage } from './notesAi.promp
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
 
-const ASHNA_API_BASE_URL = process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1';
+const ASHNA_API_BASE_URL = process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1/api';
 const ASHNA_API_KEY = process.env.ASHNA_API_KEY;
+const ASHNA_NOTES_CODE_MODEL_ID = process.env.ASHNA_NOTES_CODE_MODEL_ID;
 
 export interface NotesAiAskInput {
   selectedText: string;
@@ -24,8 +25,8 @@ export interface NotesAiAskInput {
  */
 export class NotesAiService {
   async ask(input: NotesAiAskInput): Promise<string> {
-    if (!ASHNA_API_KEY) {
-      throw new AppError('AI_PROVIDER_UNAVAILABLE', 422, 'Ashna AI is not configured');
+    if (!ASHNA_API_KEY || !ASHNA_NOTES_CODE_MODEL_ID) {
+      throw new AppError('AI_PROVIDER_UNAVAILABLE', 422, 'Ashna AI Notes/Code agent is not configured');
     }
     if (!input.selectedText.trim()) {
       throw new AppError('VALIDATION_ERROR', 400, 'selectedText must not be empty');
@@ -45,7 +46,7 @@ export class NotesAiService {
           Authorization: `Bearer ${ASHNA_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'ashna-standard', // adjust to the actual Ashna model identifier once confirmed
+          model: ASHNA_NOTES_CODE_MODEL_ID,
           messages: [
             { role: 'system', content: NOTES_AI_SYSTEM_PROMPT },
             { role: 'user', content: userMessage },
@@ -60,8 +61,15 @@ export class NotesAiService {
     }
 
     if (!response.ok) {
-      logger.error({ status: response.status }, 'Ashna AI notes request returned non-OK status');
-      throw new AppError('AI_PROVIDER_ERROR', 502, 'Ashna AI returned an error');
+      let message = 'Ashna AI returned an error';
+      try {
+        const body = (await response.json()) as { error?: { message?: string } };
+        if (body.error?.message) message = body.error.message;
+      } catch {
+        // non-JSON error body — fall back to generic message
+      }
+      logger.error({ status: response.status, message }, 'Ashna AI notes request returned non-OK status');
+      throw new AppError('AI_PROVIDER_ERROR', 502, message);
     }
 
     const data = (await response.json()) as {

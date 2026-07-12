@@ -1,21 +1,25 @@
-import { useEffect, useState } from 'react';
- 
+import React, { useEffect, useState } from 'react';
+
 export interface ContestVM {
   id: string;
   platform: string;
   name: string;
-  startTime: string; // IST ISO string
+  startTime: string;
   endTime: string;
   url: string;
   durationMinutes: number;
 }
 
-const PLATFORM_COLOR: Record<string, string> = {
-  codeforces: '#FB7185',
-  leetcode: '#FBBF24',
-  codechef: '#7C5CFC',
-  atcoder: '#2DD4BF',
+// Same rationale as EventDetailPopover's SOURCE_BORDER map — explicit
+// literal classes per platform so Tailwind's scanner can see them all,
+// rather than a dynamic template string it can't statically analyze.
+const PLATFORM_ACCENT: Record<string, { border: string; text: string }> = {
+  codeforces: { border: 'border-l-contest-badge', text: 'text-contest-badge' },
+  leetcode: { border: 'border-l-warning', text: 'text-warning' },
+  codechef: { border: 'border-l-accent-ashna', text: 'text-accent-ashna' },
+  atcoder: { border: 'border-l-accent-custom', text: 'text-accent-custom' },
 };
+const DEFAULT_ACCENT = { border: 'border-l-contest-badge', text: 'text-contest-badge' };
 
 function useCountdown(targetIso: string): string {
   const [label, setLabel] = useState('');
@@ -49,37 +53,25 @@ interface ContestCardProps {
 
 export function ContestCard({ contest, onScheduleAround }: ContestCardProps) {
   const countdown = useCountdown(contest.startTime);
-  const accent = PLATFORM_COLOR[contest.platform] ?? 'var(--color-contest-badge)';
+  const accent = PLATFORM_ACCENT[contest.platform] ?? DEFAULT_ACCENT;
 
   return (
-    <div
-      style={{
-        padding: '16px',
-        borderRadius: '12px',
-        background: 'var(--color-bg-surface)',
-        borderLeft: `4px solid ${accent}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', textTransform: 'uppercase', color: accent, fontWeight: 700 }}>
-          {contest.platform}
-        </span>
-        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{countdown}</span>
+    <div className={`flex flex-col gap-2 rounded-md border-l-4 bg-bg-surface p-4 ${accent.border}`}>
+      <div className="flex items-center justify-between">
+        <span className={`text-[11px] font-bold uppercase ${accent.text}`}>{contest.platform}</span>
+        <span className="text-xs text-text-secondary">{countdown}</span>
       </div>
 
       <a
         href={contest.url}
         target="_blank"
         rel="noreferrer"
-        style={{ color: 'var(--color-text-primary)', fontSize: '15px', fontWeight: 600, textDecoration: 'none' }}
+        className="text-[15px] font-semibold text-text-primary no-underline hover:underline"
       >
         {contest.name}
       </a>
 
-      <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+      <p className="m-0 text-xs text-text-secondary">
         {new Date(contest.startTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} &middot;{' '}
         {contest.durationMinutes} min
       </p>
@@ -88,17 +80,7 @@ export function ContestCard({ contest, onScheduleAround }: ContestCardProps) {
         <button
           type="button"
           onClick={() => onScheduleAround(contest)}
-          style={{
-            alignSelf: 'flex-start',
-            marginTop: '4px',
-            padding: '6px 12px',
-            borderRadius: '9999px',
-            border: 'none',
-            background: 'var(--color-bg-elevated)',
-            color: 'var(--color-text-primary)',
-            fontSize: '12px',
-            cursor: 'pointer',
-          }}
+          className="mt-1 self-start rounded-pill bg-bg-elevated px-3 py-1.5 text-xs text-text-primary"
         >
           Schedule around this
         </button>

@@ -10,7 +10,7 @@ interface ChatMessage {
   text: string;
   reasoning?: string;
   status?: 'pending' | 'error' | 'queued';
-  jobId?: string; // set when the backend responded 202 and handed off to the async queue
+  jobId?: string;
 }
 
 export function AiChatPanel() {
@@ -46,13 +46,9 @@ export function AiChatPanel() {
           if (result.status === 'complete') {
             replaceAssistantMessage(assistantMessageId, formatEventResponse(result.data), result.data.reasoning);
           } else {
-            // 202 path: attach the jobId so AiJobStatusIndicator can take over
-            // polling and update this same message once the job resolves.
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantMessageId
-                  ? { ...m, text: '', status: 'queued', jobId: result.jobId }
-                  : m,
+                m.id === assistantMessageId ? { ...m, text: '', status: 'queued', jobId: result.jobId } : m,
               ),
             );
           }
@@ -93,23 +89,14 @@ export function AiChatPanel() {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: 'var(--color-bg-surface)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-bg-elevated)' }}>
+    <div className="flex h-full flex-col overflow-hidden rounded-md bg-bg-surface">
+      <div className="border-b border-border-subtle p-3">
         <AiProviderSwitch compact />
       </div>
 
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>
+          <p className="text-sm text-text-secondary">
             Ask {provider === 'ashna' ? 'Ashna AI' : 'your Custom AI Agent'} to schedule something —
             e.g. "Block 2 hours every weekday evening for DSA practice, note: focus on graphs this week."
           </p>
@@ -118,82 +105,43 @@ export function AiChatPanel() {
         {messages.map((message) => (
           <div
             key={message.id}
-            style={{
-              alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '80%',
-              minWidth: 0,
-            }}
+            className={`max-w-[80%] min-w-0 ${message.role === 'user' ? 'self-end' : 'self-start'}`}
           >
             {message.status === 'queued' && message.jobId ? (
-              <div
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  background: 'var(--color-bg-elevated)',
-                }}
-              >
+              <div className="rounded-md bg-bg-elevated px-3.5 py-2.5">
                 <AiJobStatusIndicator jobId={message.jobId} onComplete={() => handleJobComplete(message.id)} />
               </div>
             ) : (
               <div
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  background: message.role === 'user' ? 'var(--color-accent-ashna)' : 'var(--color-bg-elevated)',
-                  color: message.role === 'user' ? '#0B0F19' : 'var(--color-text-primary)',
-                  fontSize: '14px',
-                  opacity: message.status === 'pending' ? 0.7 : 1,
-                  // The actual fix: whiteSpace preserves user line breaks
-                  // (so pasted multi-line prompts still look right) while
-                  // still wrapping; overflowWrap/wordBreak force a break
-                  // even mid-word for unbroken strings like long URLs.
-                  whiteSpace: 'pre-wrap',
-                  overflowWrap: 'break-word',
-                  wordBreak: 'break-word',
-                }}
+                className={`rounded-md px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap ${
+                  message.role === 'user' ? 'bg-accent-ashna text-bg-primary' : 'bg-bg-elevated text-text-primary'
+                } ${message.status === 'pending' ? 'opacity-70' : ''}`}
               >
                 {message.text}
               </div>
             )}
             {message.reasoning && (
-              <p style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
-                {message.reasoning}
-              </p>
+              <p className="mt-1.5 text-xs italic text-text-secondary">{message.reasoning}</p>
             )}
           </div>
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px', padding: '12px 16px', borderTop: '1px solid var(--color-bg-elevated)' }}>
+      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-border-subtle p-3">
         <input
           type="text"
           value={promptValue}
           onChange={(e) => setPromptValue(e.target.value)}
           placeholder="Ask the AI to schedule something…"
           disabled={isPending}
-          style={{
-            flex: 1,
-            padding: '10px 14px',
-            borderRadius: '9999px',
-            border: 'none',
-            background: 'var(--color-bg-elevated)',
-            color: 'var(--color-text-primary)',
-            fontSize: '14px',
-          }}
+          className="flex-1 rounded-pill bg-bg-elevated px-3.5 py-2.5 text-sm text-text-primary outline-none"
         />
         <button
           type="submit"
           disabled={isPending || !promptValue.trim()}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '9999px',
-            border: 'none',
-            background: 'var(--color-accent-ashna)',
-            color: '#0B0F19',
-            fontWeight: 600,
-            cursor: isPending ? 'not-allowed' : 'pointer',
-            opacity: isPending ? 0.6 : 1,
-          }}
+          className={`rounded-pill bg-accent-ashna px-4.5 py-2.5 text-sm font-semibold text-bg-primary ${
+            isPending ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          }`}
         >
           {isPending ? 'Sending…' : 'Send'}
         </button>

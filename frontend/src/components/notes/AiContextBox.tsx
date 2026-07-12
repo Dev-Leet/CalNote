@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { X, MessageSquare, AlertTriangle, Sparkles, HelpCircle } from 'lucide-react';
 import { notesAiApi, NotesAiInstruction } from '../../api/notesAi.api';
@@ -15,11 +15,6 @@ const PRESET_ACTIONS: { instruction: NotesAiInstruction; label: string; icon: ty
   { instruction: 'optimise', label: 'Optimise', icon: Sparkles },
 ];
 
-/**
- * Floating popup anchored to a text/code selection inside NoteEditor. Offers
- * three preset actions plus a free-form question field, calling
- * POST /ai/notes/ask (Agent B — the Notes & Code Assistant system prompt).
- */
 export function AiContextBox({ selectedText, position, onClose }: AiContextBoxProps) {
   const [customQuestion, setCustomQuestion] = useState('');
   const [answer, setAnswer] = useState<string | null>(null);
@@ -42,75 +37,38 @@ export function AiContextBox({ selectedText, position, onClose }: AiContextBoxPr
 
   return (
     <div
-      style={{
-        position: 'absolute',
-        top: position.top,
-        left: position.left,
-        zIndex: 1000,
-        width: '320px',
-        padding: '16px',
-        borderRadius: '14px',
-        background: 'var(--color-bg-surface)',
-        boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-        border: '1px solid var(--color-bg-elevated)',
-      }}
+      style={{ top: position.top, left: position.left }}
+      className="absolute z-[1000] w-80 rounded-lg border border-bg-elevated bg-bg-surface p-4 shadow-elevated"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Ashna AI</span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          style={{ border: 'none', background: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}
-        >
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[13px] font-bold text-text-primary">Ashna AI</span>
+        <button type="button" onClick={onClose} aria-label="Close" className="text-text-secondary">
           <X size={16} />
         </button>
       </div>
 
       {answer ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>
-            {answer}
-          </p>
+        <div className="flex flex-col gap-2.5">
+          <p className="m-0 whitespace-pre-wrap text-[13px] text-text-primary">{answer}</p>
           <button
             type="button"
             onClick={() => setAnswer(null)}
-            style={{
-              alignSelf: 'flex-start',
-              fontSize: '12px',
-              color: 'var(--color-accent-ashna)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-            }}
+            className="self-start p-0 text-xs text-accent-ashna"
           >
             Ask something else
           </button>
         </div>
       ) : isPending ? (
-        <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: 0 }}>Thinking…</p>
+        <p className="m-0 text-[13px] text-text-secondary">Thinking…</p>
       ) : (
         <>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+          <div className="mb-3.5 flex flex-col gap-1.5">
             {PRESET_ACTIONS.map(({ instruction, label, icon: Icon }) => (
               <button
                 key={instruction}
                 type="button"
                 onClick={() => handlePreset(instruction)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '9px 12px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'var(--color-bg-elevated)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
+                className="flex items-center gap-2 rounded-md bg-bg-elevated px-3 py-2.5 text-left text-[13px] text-text-primary"
               >
                 <Icon size={15} />
                 {label}
@@ -118,8 +76,8 @@ export function AiContextBox({ selectedText, position, onClose }: AiContextBoxPr
             ))}
           </div>
 
-          <label style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <label className="flex flex-col gap-1.5 text-xs text-text-secondary">
+            <span className="flex items-center gap-1">
               <HelpCircle size={12} /> Custom question about selection:
             </span>
             <textarea
@@ -127,15 +85,7 @@ export function AiContextBox({ selectedText, position, onClose }: AiContextBoxPr
               onChange={(e) => setCustomQuestion(e.target.value)}
               rows={2}
               placeholder="e.g. Can I rewrite this without recursion?"
-              style={{
-                padding: '8px 10px',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'var(--color-bg-elevated)',
-                color: 'var(--color-text-primary)',
-                fontSize: '13px',
-                resize: 'vertical',
-              }}
+              className="resize-y rounded-md bg-bg-elevated px-2.5 py-2 text-[13px] text-text-primary"
             />
           </label>
 
@@ -143,19 +93,9 @@ export function AiContextBox({ selectedText, position, onClose }: AiContextBoxPr
             type="button"
             onClick={handleCustomAsk}
             disabled={!customQuestion.trim()}
-            style={{
-              marginTop: '10px',
-              width: '100%',
-              padding: '10px',
-              borderRadius: '9999px',
-              border: 'none',
-              background: 'var(--color-accent-ashna)',
-              color: '#0B0F19',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: customQuestion.trim() ? 'pointer' : 'not-allowed',
-              opacity: customQuestion.trim() ? 1 : 0.6,
-            }}
+            className={`mt-2.5 w-full rounded-pill bg-accent-ashna py-2.5 text-[13px] font-semibold text-bg-primary ${
+              customQuestion.trim() ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+            }`}
           >
             Ask AI
           </button>

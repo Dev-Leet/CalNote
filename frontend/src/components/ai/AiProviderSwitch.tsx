@@ -5,16 +5,11 @@ interface AiProviderSwitchProps {
   compact?: boolean;
 }
 
-const OPTIONS: { value: AiProviderType; label: string; accentVar: string }[] = [
-  { value: 'ashna', label: 'Ashna AI', accentVar: 'var(--color-accent-ashna)' },
-  { value: 'custom', label: 'Custom AI Agent', accentVar: 'var(--color-accent-custom)' },
+const OPTIONS: { value: AiProviderType; label: string; activeClass: string }[] = [
+  { value: 'ashna', label: 'Ashna AI', activeClass: 'bg-accent-ashna text-bg-primary' },
+  { value: 'custom', label: 'Custom AI Agent', activeClass: 'bg-accent-custom text-bg-primary' },
 ];
 
-/**
- * Accessible segmented control for the Ashna vs Custom AI Agent toggle.
- * Implements role="radiogroup" with arrow-key navigation per WAI-ARIA
- * segmented-control pattern (Section 7.6 of the UI/UX spec).
- */
 export function AiProviderSwitch({ compact = false }: AiProviderSwitchProps) {
   const provider = useAiProviderStore((state) => state.provider);
   const setProvider = useAiProviderStore((state) => state.setProvider);
@@ -36,13 +31,7 @@ export function AiProviderSwitch({ compact = false }: AiProviderSwitchProps) {
       role="radiogroup"
       aria-label="AI provider selection"
       onKeyDown={handleKeyDown}
-      style={{
-        display: 'inline-flex',
-        borderRadius: '9999px',
-        padding: '4px',
-        background: 'var(--color-bg-elevated)',
-        gap: '4px',
-      }}
+      className="inline-flex gap-1 rounded-pill bg-bg-elevated p-1"
     >
       {OPTIONS.map((option) => {
         const isActive = provider === option.value;
@@ -54,17 +43,9 @@ export function AiProviderSwitch({ compact = false }: AiProviderSwitchProps) {
             aria-checked={isActive}
             tabIndex={isActive ? 0 : -1}
             onClick={() => setProvider(option.value)}
-            style={{
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: '9999px',
-              padding: compact ? '6px 12px' : '8px 16px',
-              fontSize: compact ? '13px' : '14px',
-              fontWeight: 600,
-              color: isActive ? '#0B0F19' : 'var(--color-text-secondary)',
-              background: isActive ? option.accentVar : 'transparent',
-              transition: 'background 150ms ease, color 150ms ease',
-            }}
+            className={`rounded-pill font-semibold transition-colors ${
+              compact ? 'px-3 py-1.5 text-[13px]' : 'px-4 py-2 text-sm'
+            } ${isActive ? option.activeClass : 'text-text-secondary'}`}
           >
             {option.label}
           </button>

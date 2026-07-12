@@ -1,6 +1,10 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Trophy } from 'lucide-react';
 import { ContestCard, ContestVM } from './ContestCard';
- 
+import { PlatformFilterBar } from './PlatformFilterBar';
+import { EmptyState } from '../common/EmptyState';
+import { LoadingSpinner } from '../common/LoadingSpinner';
+
 interface ContestListProps {
   contests: ContestVM[];
   isLoading?: boolean;
@@ -21,37 +25,20 @@ export function ContestList({ contests, isLoading, onScheduleAround }: ContestLi
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        {platforms.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPlatformFilter(p)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              border: 'none',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              background: platformFilter === p ? 'var(--color-accent-ashna)' : 'var(--color-bg-elevated)',
-              color: platformFilter === p ? '#0B0F19' : 'var(--color-text-secondary)',
-              textTransform: 'capitalize',
-            }}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-col gap-4">
+      <PlatformFilterBar platforms={platforms} active={platformFilter} onChange={setPlatformFilter} />
 
-      {isLoading && <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Loading contests…</p>}
+      {isLoading && <LoadingSpinner label="Loading contests…" />}
 
       {!isLoading && filtered.length === 0 && (
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>No upcoming contests found.</p>
+        <EmptyState
+          icon={Trophy}
+          title="No upcoming contests"
+          description="Check back soon, or try a different platform filter."
+        />
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
         {filtered.map((contest) => (
           <ContestCard key={contest.id} contest={contest} onScheduleAround={onScheduleAround} />
         ))}

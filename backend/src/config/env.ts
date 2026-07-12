@@ -30,7 +30,13 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().min(1),
 
   ASHNA_API_KEY: z.string().min(1),
-  ASHNA_API_BASE_URL: z.string().url().default('https://api.ashna.ai/v1'),
+  ASHNA_API_BASE_URL: z.string().url().default('https://api.ashna.ai/v1/api'),
+  // Two distinct Ashna agent/model IDs, one per role — each configured with
+  // its own behavior in the Ashna dashboard (per their "custom agents with
+  // specific instructions" platform feature), and additionally reinforced
+  // by the system prompts we send per-request below.
+  ASHNA_CALENDAR_MODEL_ID: z.string().min(1),
+  ASHNA_NOTES_CODE_MODEL_ID: z.string().min(1),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });

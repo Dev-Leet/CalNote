@@ -1,83 +1,79 @@
-import OpenAI from 'openai';
+/**
+ * Thin wrapper around Ashna AI's OpenAI-compatible /chat/completions
+ * endpoint, per the official API docs (Account -> API on app.ashna.ai).
+ * Deliberately does NOT set response_format or any JSON-mode parameter —
+ * the docs document no such field for this route, and sending an
+ * undocumented param risks a 400 Bad Request ("Invalid request parameters").
+ * JSON-shape enforcement is handled entirely via system-prompt instruction +
+ * sharedEventResponseZodSchema validation downstream.
+ */
 
-export interface AshnaScheduleRequest {
-  prompt: string;
-  currentDateTimeIST: string;
-  context: {
-    events: { title: string; start: string; end: string }[];
-    contests: { name: string; platform: string; start: string; end: string }[];
-    sleepWindow: { start: string; end: string };
+export interface AshnaChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface AshnaChatCompletionRequest {
+  model: string;
+  messages: AshnaChatMessage[];
+  temperature?: number;
+  max_tokens?: number;
+}
+
+export interface AshnaChatCompletionResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: {
+    index: number;
+    message: { role: string; content: string };
+    finish_reason: string;
+  }[];
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
 }
 
-export interface AshnaRawResponse {
-  scheduledItems: {
-    label: string;
-    startsAt: string;
-    endsAt: string;
-    repeatRule?: {
-      freq: 'daily' | 'weekly' | 'custom';
-      interval: number;
-      byDay?: string[];
-      until?: string | null;
-    } | null;
-    note?: string | null;
-    linkedContestId?: string | null;
-  }[];
-  explanation: string;
+interface AshnaErrorBody {
+  error?: { type?: string; message?: string; code?: string };
 }
 
-class AshnaSdkClient {
-  private openai: OpenAI;
-  private readonly modelId = process.env.ASHNA_MODEL_ID ?? '6a4e9b901b559fe5ca09a268';
+class AshnaClient {
+  private readonly apiKey = process.env.ASHNA_API_KEY;
+  private readonly baseUrl = process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1/api';
 
-  constructor() {
-    // Initialize the OpenAI SDK with Ashna's base URL and your API key
-    this.openai = new OpenAI({
-      apiKey: process.env.ASHNA_API_KEY, 
-      baseURL: process.env.ASHNA_API_BASE_URL ?? 'https://api.ashna.ai/v1/api',
-    });
-  }
-
-  async schedule(req: AshnaScheduleRequest): Promise<AshnaRawResponse> {
-    // Provide a system prompt to strictly enforce the expected JSON structure
-    const systemPrompt = `You are an AI scheduling assistant. 
-    Analyze the user's prompt, current time, and provided context (events, contests, and sleep window) to create an optimized schedule.
-    Respond ONLY with valid JSON matching this exact structure:
-    {
-      "scheduledItems": [
-        {
-          "label": "string",
-          "startsAt": "ISO date string",
-          "endsAt": "ISO date string",
-          "repeatRule": { "freq": "daily|weekly|custom", "interval": 1 },
-          "note": "string",
-          "linkedContestId": "string"
-        }
-      ],
-      "explanation": "string"
-    }`;
-
-    // Use the OpenAI-compatible chat completions endpoint
-    const response = await this.openai.chat.completions.create({
-      model: this.modelId,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: JSON.stringify(req, null, 2) }
-      ],
-      // Enforce JSON output shape
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0]?.message?.content;
-    
-    if (!content) {
-      throw new Error('Ashna AI returned an empty response');
+  async chatCompletion(req: AshnaChatCompletionRequest): Promise<AshnaChatCompletionResponse> {
+    if (!this.apiKey) {
+      throw new Error('ASHNA_API_KEY environment variable is not defined');
     }
 
-    // Parse and return the structured response
-    return JSON.parse(content) as AshnaRawResponse;
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req),
+    });
+
+    if (!res.ok) {
+      let message = `Ashna AI returned status ${res.status}`;
+      try {
+        const body = (await res.json()) as AshnaErrorBody;
+        if (body.error?.message) {
+          message = `Ashna AI error (${body.error.code ?? res.status}): ${body.error.message}`;
+        }
+      } catch {
+        // Response body wasn't JSON — fall back to the generic status message.
+      }
+      throw new Error(message);
+    }
+
+    return (await res.json()) as AshnaChatCompletionResponse;
   }
 }
 
-export const ashnaSdkClient = new AshnaSdkClient();
+export const ashnaClient = new AshnaClient();

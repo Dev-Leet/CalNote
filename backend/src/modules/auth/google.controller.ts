@@ -105,7 +105,16 @@ export async function googleSignIn(req: Request, res: Response, next: NextFuncti
       user = await UserModel.findOne({ email: identity.email });
       if (user) {
         user.googleId = identity.sub;
-        await user.save();
+        // validateModifiedOnly: only re-validates the `googleId` path we
+        // actually changed, rather than the whole document — a legacy or
+        // externally-inserted document with pre-existing invalid fields
+        // (missing authProvider/timezone, bad role enum, etc.) would
+        // otherwise fail validation on THOSE untouched fields and block
+        // an otherwise-unrelated googleId link. This treats the symptom
+        // safely; it does NOT fix bad data already sitting in MongoDB —
+        // if `role: "farmer"` is real data, that document still needs a
+        // manual DB fix/migration, this just stops it from crashing sign-in.
+        await user.save({ validateModifiedOnly: true });
       }
     }
 

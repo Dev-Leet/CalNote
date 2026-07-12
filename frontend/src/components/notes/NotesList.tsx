@@ -1,7 +1,7 @@
-
+import React from 'react';
 import { NoteDto } from '../../types/shared';
 import { formatISTDate } from '../../utils/formatters';
- 
+
 interface NotesListProps {
   notes: NoteDto[];
   activeNoteId: string | 'new' | null;
@@ -32,28 +32,19 @@ function extractPreview(contentRichText: string): string {
 
 export function NotesList({ notes, activeNoteId, onSelect, onDelete }: NotesListProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }}>
+    <div className="flex flex-col gap-1.5 overflow-y-auto">
       {notes.map((note) => (
         <button
           key={note._id}
           type="button"
           onClick={() => onSelect(note._id)}
-          style={{
-            textAlign: 'left',
-            padding: '12px',
-            borderRadius: '10px',
-            border: 'none',
-            background: activeNoteId === note._id ? 'var(--color-bg-elevated)' : 'var(--color-bg-surface)',
-            cursor: 'pointer',
-          }}
+          className={`rounded-md p-3 text-left ${
+            activeNoteId === note._id ? 'bg-bg-elevated' : 'bg-bg-surface'
+          }`}
         >
-          <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-primary)' }}>
-            {extractPreview(note.contentRichText).slice(0, 80)}
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-              {formatISTDate(note.updatedAt)}
-            </span>
+          <p className="m-0 text-[13px] text-text-primary">{extractPreview(note.contentRichText).slice(0, 80)}</p>
+          <div className="mt-1.5 flex justify-between">
+            <span className="text-[11px] text-text-secondary">{formatISTDate(note.updatedAt)}</span>
             <span
               role="button"
               tabIndex={0}
@@ -61,7 +52,7 @@ export function NotesList({ notes, activeNoteId, onSelect, onDelete }: NotesList
                 e.stopPropagation();
                 onDelete(note._id);
               }}
-              style={{ fontSize: '11px', color: 'var(--color-danger)', cursor: 'pointer' }}
+              className="text-[11px] text-danger"
             >
               Delete
             </span>

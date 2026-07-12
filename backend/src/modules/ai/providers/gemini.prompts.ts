@@ -1,5 +1,5 @@
 import { Type } from '@google/genai';
-import { z } from 'zod';
+import { sharedEventResponseZodSchema } from '../eventResponseContract';
 
 /**
  * System instruction — passed via config.systemInstruction on every Gemini call.
@@ -58,35 +58,7 @@ export const GEMINI_RESPONSE_SCHEMA = {
 };
 
 /**
- * Application-layer Zod validation. Re-validates parsed Gemini output as untrusted
- * input, catching semantically invalid values (e.g. endTime before startTime) that
- * the API-level schema alone cannot enforce.
+ * Application-layer Zod validation, extracted to eventResponseContract.ts
+ * since it's now shared with AshnaAiService, not Gemini-specific.
  */
-const recurrenceZodSchema = z
-  .object({
-    freq: z.enum(['daily', 'weekly', 'custom']),
-    interval: z.number().int().positive(),
-    byDay: z.array(z.string()).nullable().optional(),
-    until: z.string().nullable().optional(),
-  })
-  .nullable()
-  .optional();
-
-const eventZodSchema = z
-  .object({
-    title: z.string().min(1).max(200),
-    startTime: z.string().datetime({ offset: true }),
-    endTime: z.string().datetime({ offset: true }),
-    recurrence: recurrenceZodSchema,
-    notes: z.string().nullable().optional(),
-    sourceContestId: z.string().nullable().optional(),
-  })
-  .refine((event) => new Date(event.endTime) > new Date(event.startTime), {
-    message: 'endTime must be after startTime',
-    path: ['endTime'],
-  });
-
-export const geminiEventResponseZodSchema = z.object({
-  events: z.array(eventZodSchema).min(1),
-  reasoning: z.string().min(1).max(1000),
-});
+export const geminiEventResponseZodSchema = sharedEventResponseZodSchema;
