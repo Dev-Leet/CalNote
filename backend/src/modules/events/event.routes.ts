@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { listEvents, createEvent, updateEvent, deleteEvent } from './event.controller';
+import { getUpcomingGoogleEvents } from './googleCalendarFetch.controller';
 
 const router = Router();
 router.use(requireAuth);
@@ -37,6 +38,7 @@ const createEventSchema = z.object({
 const updateEventSchema = createEventSchema.partial();
 
 router.get('/', validate(listQuerySchema, 'query'), listEvents);
+router.get('/google/upcoming', getUpcomingGoogleEvents);
 router.post('/', validate(createEventSchema), createEvent);
 router.patch('/:id', validate(updateEventSchema), updateEvent);
 router.delete('/:id', deleteEvent);

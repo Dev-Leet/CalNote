@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { CalendarGrid, CalendarEventVM } from '../components/calendar/CalendarGrid';
 import { AiChatPanel } from '../components/ai/AiChatPanel';
+import { GoogleCalendarPreview } from '../components/calendar/GoogleCalendarPreview';
 import { SlotInfo } from 'react-big-calendar';
- 
+
 export function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventVM | null>(null);
 
@@ -20,8 +21,26 @@ export function CalendarPage() {
         <CalendarGrid onSelectEvent={handleSelectEvent} onSelectSlot={handleSelectSlot} />
       </div>
 
-      <div style={{ height: '100%' }}>
-        <AiChatPanel />
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '16px', minHeight: 0 }}>
+        <div
+          style={{
+            flex: '0 0 auto',
+            maxHeight: '240px',
+            overflowY: 'auto',
+            padding: '14px',
+            borderRadius: '12px',
+            background: 'var(--color-bg-surface)',
+          }}
+        >
+          <h3 style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--color-text-primary)' }}>
+            My Google Calendar
+          </h3>
+          <GoogleCalendarPreview />
+        </div>
+
+        <div style={{ flex: '1 1 auto', minHeight: 0 }}>
+          <AiChatPanel />
+        </div>
       </div>
 
       {selectedEvent && (

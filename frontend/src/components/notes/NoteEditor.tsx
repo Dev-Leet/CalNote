@@ -4,6 +4,8 @@ import StarterKit from '@tiptap/starter-kit';
 import CodeBlock from '@tiptap/extension-code-block';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../api/client';
+import { useEditorSelectionContext } from '../../hooks/useEditorSelectionContext';
+import { AiContextBox } from './AiContextBox';
  
 interface NoteEditorProps {
   noteId?: string;         // undefined = creating a new note
@@ -39,6 +41,10 @@ export function NoteEditor({ noteId, eventId, initialContent, onSaved }: NoteEdi
     },
   });
 
+  // Task 3: highlight-to-ask-AI. Tracks the current selection inside the
+  // editor and surfaces a floating AiContextBox anchored to it.
+  const { selection, clearSelection } = useEditorSelectionContext(editor);
+
   const { mutate, isPending } = useMutation({
     mutationFn: (payload: SaveNotePayload) => saveNote(noteId, payload),
     onSuccess: () => {
@@ -64,6 +70,7 @@ export function NoteEditor({ noteId, eventId, initialContent, onSaved }: NoteEdi
   return (
     <div
       style={{
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         border: '1px solid var(--color-bg-elevated)',
@@ -72,6 +79,13 @@ export function NoteEditor({ noteId, eventId, initialContent, onSaved }: NoteEdi
         overflow: 'hidden',
       }}
     >
+      {selection && (
+        <AiContextBox
+          selectedText={selection.text}
+          position={{ top: selection.top, left: selection.left }}
+          onClose={clearSelection}
+        />
+      )}
       <div
         style={{
           display: 'flex',

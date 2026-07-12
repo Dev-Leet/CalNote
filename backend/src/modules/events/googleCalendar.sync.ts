@@ -113,9 +113,55 @@ export class GoogleCalendarSyncService {
   }
 
   /**
+   * Fetches the user's upcoming events directly from their Google Calendar
+   * (the "pull" direction — pushEvent/deleteEvent above only ever push OUR
+   * events TO Google). Returns a normalized summary shape, not raw Google
+   * API objects, so callers don't need to know Google's event schema.
+   */
+  async fetchUpcomingEvents(
+    user: IUser,
+    maxResults = 20,
+  ): Promise<{ googleEventId: string; title: string; startTime: string; endTime: string; isAllDay: boolean }[]> {
+    if (!user.googleRefreshToken) {
+      return [];
+    }
+
+    try {
+      const calendar = getAuthorizedCalendarClient(user.googleRefreshToken);
+      const res = await calendar.events.list({
+        calendarId: CALENDAR_ID,
+        timeMin: new Date().toISOString(),
+        maxResults,
+        singleEvents: true, // expands recurring series into individual instances
+        orderBy: 'startTime',
+      });
+
+      const items = res.data.items ?? [];
+
+      return items
+        .filter((item) => item.id && item.summary)
+        .map((item) => {
+          const isAllDay = !!item.start?.date && !item.start?.dateTime;
+          return {
+            googleEventId: item.id as string,
+            title: item.summary as string,
+            startTime: (item.start?.dateTime ?? item.start?.date) as string,
+            endTime: (item.end?.dateTime ?? item.end?.date) as string,
+            isAllDay,
+          };
+        });
+    } catch (err) {
+      logger.error({ err, userId: user._id.toString() }, 'Failed to fetch upcoming Google Calendar events');
+      // Graceful degradation, consistent with pushEvent/deleteEvent above —
+      // a GCal read failure returns an empty list rather than throwing,
+      // so the caller can decide how to handle "no synced events available."
+      return [];
+    }
+  }
+
+  /**
    * Exchanges an OAuth authorization code for tokens and stores the refresh
-   * token on the user document. Called from the /auth/google/callback route
-   * (not generated in this phase — this is the service-layer half only).
+   * token on the user document. Called from the /auth/google/callback route.
    */
   async linkAccount(userId: string, refreshToken: string): Promise<void> {
     const { UserModel } = await import('../../models/User.model');

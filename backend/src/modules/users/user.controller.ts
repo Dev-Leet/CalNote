@@ -18,10 +18,15 @@ interface UpdatePreferencesBody {
  * Strips sensitive fields before returning preferences to the client.
  * apiKeyEncrypted is never included in any response, write-only by design.
  */
+const DEFAULT_SLEEP_WINDOW = { start: '23:00', end: '06:00' };
+
 function toPublicPreferences(prefs: IUserPreferences) {
   const { customAiConfig, ...rest } = prefs;
   return {
     ...rest,
+    // Guarantees the response always has a sleepWindow object, even for
+    // legacy documents that predate this field being consistently populated.
+    sleepWindow: rest.sleepWindow ?? DEFAULT_SLEEP_WINDOW,
     customAiConfig: customAiConfig
       ? { endpoint: customAiConfig.endpoint, model: customAiConfig.model, hasApiKey: true }
       : undefined,

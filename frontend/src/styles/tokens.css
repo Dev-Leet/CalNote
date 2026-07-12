@@ -1,31 +1,66 @@
 :root {
-  --color-bg-primary: #0B0F19;
-  --color-bg-surface: #141A29;
-  --color-bg-elevated: #1C2333;
+  /* Dark mode (default) — softened from the original raw black/bright-purple */
+  --color-bg-primary: #0F1117;
+  --color-bg-surface: #171A23;
+  --color-bg-elevated: #1F2430;
+  --color-border-subtle: #2A2F3D;
 
-  --color-accent-ashna: #7C5CFC;
-  --color-accent-custom: #2DD4BF;
+  --color-accent-ashna: #8B7CF6;      /* softened violet, was #7C5CFC */
+  --color-accent-ashna-tint: rgba(139, 124, 246, 0.14);
+  --color-accent-custom: #4FD1C5;     /* softened teal, was #2DD4BF */
+  --color-accent-custom-tint: rgba(79, 209, 197, 0.14);
 
-  --color-text-primary: #F4F5F7;
-  --color-text-secondary: #9AA3B2;
+  --color-text-primary: #E8E9ED;
+  --color-text-secondary: #8B93A7;
 
   --color-success: #34D399;
-  --color-warning: #FBBF24;
-  --color-danger: #F87171;
+  --color-success-tint: rgba(52, 211, 153, 0.14);
+  --color-warning: #F5A623;
+  --color-warning-tint: rgba(245, 166, 35, 0.14);
+  --color-danger: #F5656A;
+  --color-danger-tint: rgba(245, 101, 106, 0.14);
 
-  --color-contest-badge: #FB7185;
+  --color-contest-badge: #F783AC;
+  --color-contest-badge-tint: rgba(247, 131, 172, 0.14);
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', monospace;
 
-  --radius: 8px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.28);
+
+  color-scheme: dark;
 }
 
 [data-theme='light'] {
-  --color-bg-primary: #FFFFFF;
-  --color-bg-surface: #F7F8FA;
-  --color-bg-elevated: #EDEFF3;
+  --color-bg-primary: #FAFAFB;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #F1F2F5;
+  --color-border-subtle: #E4E6EB;
 
-  --color-text-primary: #1A1D24;
-  --color-text-secondary: #5B6472;
+  --color-accent-ashna: #7C5CFC;
+  --color-accent-ashna-tint: rgba(124, 92, 252, 0.10);
+  --color-accent-custom: #0EA5A0;
+  --color-accent-custom-tint: rgba(14, 165, 160, 0.10);
+
+  --color-text-primary: #1A1D29;
+  --color-text-secondary: #6B7280;
+
+  --color-success: #17924E;
+  --color-success-tint: rgba(23, 146, 78, 0.10);
+  --color-warning: #B7791F;
+  --color-warning-tint: rgba(183, 121, 31, 0.10);
+  --color-danger: #D93B41;
+  --color-danger-tint: rgba(217, 59, 65, 0.10);
+
+  --color-contest-badge: #C2255C;
+  --color-contest-badge-tint: rgba(194, 37, 92, 0.10);
+
+  --shadow-elevated: 0 8px 24px rgba(15, 17, 23, 0.08);
+
+  color-scheme: light;
 }

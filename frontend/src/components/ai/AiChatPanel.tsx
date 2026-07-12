@@ -121,6 +121,7 @@ export function AiChatPanel() {
             style={{
               alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '80%',
+              minWidth: 0,
             }}
           >
             {message.status === 'queued' && message.jobId ? (
@@ -142,6 +143,13 @@ export function AiChatPanel() {
                   color: message.role === 'user' ? '#0B0F19' : 'var(--color-text-primary)',
                   fontSize: '14px',
                   opacity: message.status === 'pending' ? 0.7 : 1,
+                  // The actual fix: whiteSpace preserves user line breaks
+                  // (so pasted multi-line prompts still look right) while
+                  // still wrapping; overflowWrap/wordBreak force a break
+                  // even mid-word for unbroken strings like long URLs.
+                  whiteSpace: 'pre-wrap',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
                 }}
               >
                 {message.text}

@@ -26,10 +26,22 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const SOURCE_COLOR: Record<CalendarEventVM['source'], string> = {
-  manual: '#9AA3B2',
-  'ai-ashna': '#7C5CFC',
-  'ai-custom': '#2DD4BF',
+const SOURCE_COLOR: Record<CalendarEventVM['source'], { text: string; border: string; bg: string }> = {
+  manual: {
+    text: 'var(--color-text-primary)',
+    border: 'var(--color-border-subtle)',
+    bg: 'var(--color-bg-elevated)',
+  },
+  'ai-ashna': {
+    text: 'var(--color-accent-ashna)',
+    border: 'var(--color-accent-ashna)',
+    bg: 'var(--color-accent-ashna-tint)',
+  },
+  'ai-custom': {
+    text: 'var(--color-accent-custom)',
+    border: 'var(--color-accent-custom)',
+    bg: 'var(--color-accent-custom-tint)',
+  },
 };
 
 interface CalendarGridProps {
@@ -63,18 +75,20 @@ export function CalendarGrid({ onSelectEvent, onSelectSlot }: CalendarGridProps)
   const { data: eventDtos = [], isLoading } = useEventsQuery({ from: range.from, to: range.to });
   const events = useMemo(() => eventDtos.map(toVM), [eventDtos]);
 
-  const eventStyleGetter = useCallback(
-    (event: CalendarEventVM) => ({
+  const eventStyleGetter = useCallback((event: CalendarEventVM) => {
+    const palette = SOURCE_COLOR[event.source];
+    return {
       style: {
-        backgroundColor: SOURCE_COLOR[event.source],
-        borderRadius: '6px',
-        border: 'none',
-        color: '#0B0F19',
+        backgroundColor: palette.bg,
+        borderLeft: `3px solid ${palette.border}`,
+        borderRadius: 'var(--radius-sm)',
+        color: palette.text,
         fontSize: '12px',
+        fontWeight: 600,
+        padding: '2px 6px',
       },
-    }),
-    [],
-  );
+    };
+  }, []);
 
   const handleRangeChange = useCallback((newRange: Date[] | { start: Date; end: Date }) => {
     if (Array.isArray(newRange)) {

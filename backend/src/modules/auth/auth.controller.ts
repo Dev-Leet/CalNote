@@ -3,14 +3,7 @@ import crypto from 'crypto';
 import { authService } from './auth.service';
 import { UserModel } from '../../models/User.model';
 import { AppError } from '../../utils/AppError';
-
-const REFRESH_COOKIE_NAME = 'refreshToken';
-const REFRESH_COOKIE_OPTS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-};
+import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_OPTS } from './authCookies';
 
 function toPublicUser(user: { _id: unknown; email: string; role: 'user' | 'admin' }) {
   return { id: user._id, email: user.email, role: user.role };

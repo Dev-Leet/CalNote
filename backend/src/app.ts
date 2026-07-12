@@ -8,6 +8,7 @@ import eventRoutes from './modules/events/event.routes';
 import contestRoutes from './modules/contests/contest.routes';
 import notesRoutes from './modules/notes/notes.routes';
 import aiRoutes from './modules/ai/ai.routes';
+import codeExecutionRoutes from './modules/codeExecution/codeExecution.routes';
 import googleRoutes from './modules/auth/google.routes';
 import sessionsRoutes from './modules/users/sessions.routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware';
@@ -39,6 +40,7 @@ export function createApp(): Express {
   app.use('/api/v1/contests', contestRoutes);
   app.use('/api/v1/notes', notesRoutes);
   app.use('/api/v1/ai', aiRoutes);
+  app.use('/api/v1/code-execution', codeExecutionRoutes);
   
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
-import { getGoogleConsentUrl, createGoogleOAuthClient } from '../../config/google';
+import { getGoogleConsentUrl, createGoogleOAuthClient, verifyGoogleIdToken } from '../../config/google';
 import { googleCalendarSyncService } from '../events/googleCalendar.sync';
 import { redisClient } from '../../config/redis';
+import { UserModel } from '../../models/User.model';
+import { authService } from './auth.service';
+import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_OPTS } from './authCookies';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
 
@@ -70,6 +73,62 @@ export async function unlinkGoogle(req: Request, res: Response, next: NextFuncti
     res.status(204).send();
   } catch (err) {
     next(err);
+  }
+}
+
+/**
+ * "Sign in with Google" — a completely separate flow from consent/callback
+ * above. Those use the OAuth authorization-code flow (requires an already
+ * logged-in user, grants Calendar API scope). This uses ID-token
+ * verification (Google Identity Services' one-step client-side flow) purely
+ * to establish IDENTITY — no Calendar scope is requested or granted here.
+ *
+ * Find-or-create logic, in priority order:
+ *   1. Match by googleId (returning Google sign-in)
+ *   2. Match by verified email (a local-password user signing in with Google
+ *      for the first time) -> link googleId to that existing account
+ *   3. No match -> create a new account with authProvider: 'google'
+ */
+export async function googleSignIn(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { idToken } = req.body as { idToken: string };
+
+    const identity = await verifyGoogleIdToken(idToken);
+
+    if (!identity.email || !identity.emailVerified) {
+      throw new AppError('INVALID_GOOGLE_TOKEN', 401, "Google account's email is not verified");
+    }
+
+    let user = await UserModel.findOne({ googleId: identity.sub });
+
+    if (!user) {
+      user = await UserModel.findOne({ email: identity.email });
+      if (user) {
+        user.googleId = identity.sub;
+        await user.save();
+      }
+    }
+
+    if (!user) {
+      user = await UserModel.create({
+        email: identity.email,
+        authProvider: 'google',
+        googleId: identity.sub,
+      });
+    }
+
+    const deviceId = crypto.randomUUID();
+    const refreshToken = await authService.issueRefreshToken(user, deviceId);
+    const accessToken = authService.generateAccessToken(user);
+
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTS);
+    res.status(200).json({
+      user: { id: user._id, email: user.email, role: user.role },
+      accessToken,
+    });
+  } catch (err) {
+    logger.error({ err }, 'Google sign-in failed');
+    next(err instanceof AppError ? err : new AppError('INVALID_GOOGLE_TOKEN', 401, 'Google sign-in failed'));
   }
 }
 

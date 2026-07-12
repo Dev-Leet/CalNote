@@ -36,3 +36,36 @@ export function getAuthorizedCalendarClient(googleRefreshToken: string) {
   client.setCredentials({ refresh_token: googleRefreshToken });
   return google.calendar({ version: 'v3', auth: client });
 }
+
+export interface VerifiedGoogleIdentity {
+  sub: string;
+  email: string | undefined;
+  emailVerified: boolean;
+  name: string | undefined;
+}
+
+/**
+ * Verifies a Google ID token (obtained client-side via Google Identity
+ * Services) against Google's public keys and this app's own client ID as
+ * the expected audience — critical: without the audience check, a token
+ * issued for a DIFFERENT app could be replayed here.
+ */
+export async function verifyGoogleIdToken(idToken: string): Promise<VerifiedGoogleIdentity> {
+  const client = createGoogleOAuthClient();
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: GOOGLE_CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+  if (!payload) {
+    throw new Error('Google ID token verification returned no payload');
+  }
+
+  return {
+    sub: payload.sub,
+    email: payload.email,
+    emailVerified: payload.email_verified ?? false,
+    name: payload.name,
+  };
+}

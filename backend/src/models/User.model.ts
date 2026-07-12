@@ -34,6 +34,14 @@ export interface IUser extends Document {
   email: string;
   passwordHash?: string;
   authProvider: 'local' | 'google';
+  /**
+   * Google's stable `sub` claim from a verified ID token — used to match
+   * returning Google sign-ins. Distinct from googleRefreshToken below:
+   * googleId identifies WHO the user is (sign-in), googleRefreshToken grants
+   * Calendar API ACCESS (a separate consent grant, requested only when the
+   * user explicitly links their calendar via Settings).
+   */
+  googleId?: string;
   googleRefreshToken?: string;
   preferences: IUserPreferences;
   refreshTokens: IRefreshToken[];
@@ -97,6 +105,7 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     passwordHash: { type: String, select: false },
     authProvider: { type: String, enum: ['local', 'google'], required: true },
+    googleId: { type: String, index: true, sparse: true, unique: true },
     googleRefreshToken: { type: String, select: false },
     preferences: { type: UserPreferencesSchema, required: true, default: () => ({}) },
     refreshTokens: { type: [RefreshTokenSchema], default: [] },

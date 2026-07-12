@@ -8,6 +8,7 @@ import { CalendarPage } from '../pages/CalendarPage';
 import { ContestsPage } from '../pages/ContestsPage';
 import { NotesPage } from '../pages/NotesPage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { CodePage } from '../pages/CodePage';
 
 /**
  * Attempts silent session restoration via the httpOnly refresh cookie on app
@@ -71,6 +72,7 @@ const router = createBrowserRouter([
           { path: '/calendar', element: <CalendarPage /> },
           { path: '/contests', element: <ContestsPage /> },
           { path: '/notes', element: <NotesPage /> },
+          { path: '/code', element: <CodePage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },

@@ -4,9 +4,9 @@ import apiClient from '../../api/client';
 
 interface PreferencesDto {
   defaultAiProvider: 'ashna' | 'custom';
-  sleepWindow: { start: string; end: string };
+  sleepWindow?: { start: string; end: string };
   timezone: 'Asia/Kolkata';
-  notifyBeforeContestMins: number;
+  notifyBeforeContestMins?: number;
   customAiConfig?: { endpoint: string; model: string; hasApiKey: boolean };
 }
 
@@ -14,6 +14,12 @@ interface UpdatePreferencesPayload {
   sleepWindow?: { start: string; end: string };
   notifyBeforeContestMins?: number;
 }
+
+// Fallbacks mirror the backend's own schema defaults (User.model.ts's
+// SleepWindowSchema), so a user who's never touched this section sees the
+// same values the backend would have used had the field been populated.
+const DEFAULT_SLEEP_WINDOW = { start: '23:00', end: '06:00' };
+const DEFAULT_NOTIFY_MINS = 60;
 
 async function savePreferences(payload: UpdatePreferencesPayload): Promise<PreferencesDto> {
   const { data } = await apiClient.patch<{ preferences: PreferencesDto }>('/users/me/preferences', payload);
@@ -24,23 +30,23 @@ interface SchedulingPreferencesSectionProps {
   preferences: PreferencesDto;
 }
 
-/**
- * Owns sleep window and contest-notification timing — the scheduling-behavior
- * half of preferences, distinct from AiPreferencesSection's provider/Gemini
- * config half. Timezone is displayed but permanently locked (SRS 3.4.3).
- */
 export function SchedulingPreferencesSection({ preferences }: SchedulingPreferencesSectionProps) {
   const queryClient = useQueryClient();
 
-  const [sleepStart, setSleepStart] = useState(preferences.sleepWindow.start);
-  const [sleepEnd, setSleepEnd] = useState(preferences.sleepWindow.end);
-  const [notifyMins, setNotifyMins] = useState(preferences.notifyBeforeContestMins);
+  const [sleepStart, setSleepStart] = useState(preferences.sleepWindow?.start ?? DEFAULT_SLEEP_WINDOW.start);
+  const [sleepEnd, setSleepEnd] = useState(preferences.sleepWindow?.end ?? DEFAULT_SLEEP_WINDOW.end);
+  const [notifyMins, setNotifyMins] = useState(preferences.notifyBeforeContestMins ?? DEFAULT_NOTIFY_MINS);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setSleepStart(preferences.sleepWindow.start);
-    setSleepEnd(preferences.sleepWindow.end);
-    setNotifyMins(preferences.notifyBeforeContestMins);
+    // Optional chaining + nullish coalescing: this is the actual fix — the
+    // crash happened here specifically, since this effect re-reads
+    // preferences.sleepWindow.start every time the `preferences` prop
+    // changes (e.g. after any PATCH elsewhere in Settings), and that field
+    // was undefined for some accounts.
+    setSleepStart(preferences.sleepWindow?.start ?? DEFAULT_SLEEP_WINDOW.start);
+    setSleepEnd(preferences.sleepWindow?.end ?? DEFAULT_SLEEP_WINDOW.end);
+    setNotifyMins(preferences.notifyBeforeContestMins ?? DEFAULT_NOTIFY_MINS);
   }, [preferences]);
 
   const { mutate, isPending } = useMutation({
@@ -63,6 +69,12 @@ export function SchedulingPreferencesSection({ preferences }: SchedulingPreferen
   return (
     <form onSubmit={handleSubmit} style={sectionStyle}>
       <h2 style={sectionTitleStyle}>Scheduling Preferences</h2>
+
+      {!preferences.sleepWindow && (
+        <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', margin: 0 }}>
+          Default settings applied.
+        </p>
+      )}
 
       {savedMessage && (
         <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--color-success)', color: '#0B0F19', fontSize: '13px' }}>

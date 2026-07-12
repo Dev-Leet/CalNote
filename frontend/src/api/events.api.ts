@@ -16,12 +16,27 @@ export interface UpdateEventPayload {
   recurrence?: EventDto['recurrence'];
 }
 
+export interface GoogleCalendarEventSummary {
+  googleEventId: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  isAllDay: boolean;
+}
+
 export const eventsApi = {
   async list(from: string, to: string, source?: EventDto['source']): Promise<EventDto[]> {
     const { data } = await apiClient.get<{ events: EventDto[] }>('/events', {
       params: { from, to, source },
     });
     return data.events;
+  },
+
+  async listGoogleUpcoming(): Promise<{ events: GoogleCalendarEventSummary[]; linked: boolean }> {
+    const { data } = await apiClient.get<{ events: GoogleCalendarEventSummary[]; linked: boolean }>(
+      '/events/google/upcoming',
+    );
+    return data;
   },
 
   async create(payload: CreateEventPayload): Promise<EventDto> {

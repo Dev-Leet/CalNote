@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
+import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
  
 type Mode = 'login' | 'register';
 
@@ -99,6 +100,17 @@ export function AuthPage() {
         >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Log in'}
         </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--color-bg-elevated)' }} />
+          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--color-bg-elevated)' }} />
+        </div>
+
+        <GoogleSignInButton
+          onSuccess={() => navigate('/calendar', { replace: true })}
+          onError={setError}
+        />
       </form>
     </div>
   );
