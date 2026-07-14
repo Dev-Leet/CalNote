@@ -8,9 +8,10 @@ import { useEditorSelectionContext } from '../../hooks/useEditorSelectionContext
 import { AiContextBox } from './AiContextBox';
  
 interface NoteEditorProps {
-  noteId?: string;         // undefined = creating a new note
-  eventId?: string;        // optional link to a parent event
-  initialContent?: string; // serialized TipTap JSON string
+  noteId?: string;
+  eventId?: string;
+  eventTitle?: string;     // for display only — shows which event this note is about
+  initialContent?: string;
   onSaved?: () => void;
 }
 
@@ -28,7 +29,7 @@ async function saveNote(noteId: string | undefined, payload: SaveNotePayload) {
   return data.note;
 }
 
-export function NoteEditor({ noteId, eventId, initialContent, onSaved }: NoteEditorProps) {
+export function NoteEditor({ noteId, eventId, eventTitle, initialContent, onSaved }: NoteEditorProps) {
   const queryClient = useQueryClient();
 
   const editor = useEditor({
@@ -69,6 +70,12 @@ export function NoteEditor({ noteId, eventId, initialContent, onSaved }: NoteEdi
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-md border border-bg-elevated bg-bg-surface">
+      {eventTitle && (
+        <div className="border-b border-bg-elevated bg-accent-ashna-tint px-3.5 py-2">
+          <p className="m-0 text-[11px] font-semibold uppercase text-accent-ashna">Writing about</p>
+          <p className="m-0 text-[13px] text-text-primary">{eventTitle}</p>
+        </div>
+      )}
       {selection && (
         <AiContextBox
           selectedText={selection.text}

@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response } from 'express';
  
 /**
@@ -26,7 +26,7 @@ export const aiScheduleRateLimiter = rateLimit({
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: Request) => req.user?.userId ?? req.ip ?? 'anonymous',
+  keyGenerator: (req: Request) => req.user?.userId ?? ipKeyGenerator(req.ip ?? ''),
   handler: rateLimitedResponse,
 });
 

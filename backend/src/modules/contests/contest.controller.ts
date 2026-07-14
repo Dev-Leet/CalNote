@@ -7,11 +7,17 @@ import { serializeContest, serializeContests } from '../../utils/serializers';
 
 export async function listContests(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { platform, from, to } = req.query as { platform?: string; from?: string; to?: string };
+    const { platform, from, to, includePast } = req.query as {
+      platform?: string;
+      from?: string;
+      to?: string;
+      includePast?: string;
+    };
     const contests = await contestService.getContests({
       platform,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      includePast: includePast === 'true',
     });
     res.status(200).json({ contests: serializeContests(contests) });
   } catch (err) {

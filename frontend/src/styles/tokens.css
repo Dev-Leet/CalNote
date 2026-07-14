@@ -1,9 +1,16 @@
 :root {
   /* Dark mode (default) — softened from the original raw black/bright-purple */
-  --color-bg-primary: #0F1117;
-  --color-bg-surface: #171A23;
-  --color-bg-elevated: #1F2430;
-  --color-border-subtle: #2A2F3D;
+  --color-bg-primary: #15171F;
+  --color-bg-surface: #1C1F2A;
+  --color-bg-elevated: #262B38;
+  --color-border-subtle: #343A4A;
+  /* Calendar-specific tokens: distinct from the general surface scale above
+     since the grid needs a slightly different contrast relationship (subtle
+     but visible cell lines) than cards/panels do. */
+  --color-calendar-grid-line: #2C3140;
+  --color-calendar-off-range: #1A1D27;
+  --color-calendar-today-tint: rgba(139, 124, 246, 0.08);
+  --color-calendar-now-indicator: #E8919A;
 
   --color-accent-ashna: #8B7CF6;      /* softened violet, was #7C5CFC */
   --color-accent-ashna-tint: rgba(139, 124, 246, 0.14);

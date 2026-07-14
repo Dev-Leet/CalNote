@@ -20,7 +20,7 @@ const ContestSchema = new Schema<IContest>(
     platform: { type: String, required: true, index: true },
     externalId: { type: String, required: true },
     name: { type: String, required: true, trim: true },
-    startTime: { type: Date, required: true, index: true },
+    startTime: { type: Date, required: true },
     endTime: { type: Date, required: true },
     url: { type: String, required: true },
     durationMinutes: { type: Number, required: true, min: 0 },

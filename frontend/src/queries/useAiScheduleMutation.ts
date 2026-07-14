@@ -31,6 +31,7 @@ export interface AiJobAcceptedResponse {
 
 export interface AiScheduleRequest {
   prompt: string;
+  inputMode?: 'text' | 'voice';
   dateRangeHint?: { from: string; to: string };
 }
 
@@ -41,7 +42,7 @@ type AiScheduleResult =
 async function submitAiSchedule(req: AiScheduleRequest, provider: 'ashna' | 'custom'): Promise<AiScheduleResult> {
   const response = await apiClient.post<NormalizedAiEventResponse | AiJobAcceptedResponse>(
     '/ai/schedule',
-    { ...req, provider },
+    { ...req, provider, inputMode: req.inputMode ?? 'text' },
   );
 
   if (response.status === 202) {

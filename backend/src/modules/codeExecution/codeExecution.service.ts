@@ -50,9 +50,9 @@ export class CodeExecutionService {
    * runCode() can resolve "python" -> the correct exact version string
    * Piston requires, without either side hardcoding version numbers.
    */
-  async getRuntimes(): Promise<PistonRuntime[]> {
+  async getRuntimes(forceRefresh = false): Promise<PistonRuntime[]> {
     const now = Date.now();
-    if (this.runtimesCache && now - this.runtimesCache.fetchedAt < RUNTIMES_CACHE_TTL_MS) {
+    if (!forceRefresh && this.runtimesCache && now - this.runtimesCache.fetchedAt < RUNTIMES_CACHE_TTL_MS) {
       return this.runtimesCache.data;
     }
 
@@ -78,16 +78,47 @@ export class CodeExecutionService {
       throw new AppError('VALIDATION_ERROR', 400, 'code must not be empty');
     }
 
-    const runtimes = await this.getRuntimes();
-    const match = runtimes.find(
-      (r) => r.language === input.language || r.aliases.includes(input.language),
-    );
+    let runtimes = await this.getRuntimes();
+    let match = runtimes.find((r) => r.language === input.language || r.aliases.includes(input.language));
 
     if (!match) {
       throw new AppError('VALIDATION_ERROR', 400, `Unsupported language: ${input.language}`);
     }
 
+    // First attempt uses the (possibly hour-stale) cached version string.
+    // If Piston later rejects it as an unknown language/version pair
+    // (their instance updates runtime versions periodically), force a fresh
+    // fetch once and retry — cheaper than making every request pay a fresh
+    // network round-trip, but self-healing when the cache genuinely drifts.
+    const executeOnce = () =>
+      fetch(`${PISTON_BASE_URL}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: match!.language,
+          version: match!.version,
+          files: [{ content: input.code }],
+          stdin: input.stdin ?? '',
+        }),
+      });
+
     let response: Response;
+    try {
+      response = await executeOnce();
+      if (response.status === 400) {
+        runtimes = await this.getRuntimes(true);
+        const refreshedMatch = runtimes.find((r) => r.language === input.language || r.aliases.includes(input.language));
+        if (refreshedMatch && refreshedMatch.version !== match.version) {
+          match = refreshedMatch;
+          response = await executeOnce();
+        }
+      }
+    } catch (err) {
+      logger.error({ err }, 'Piston execute request failed to send');
+      throw new AppError('AI_PROVIDER_ERROR', 502, 'Failed to reach code execution service');
+    }
+/* 
+    //let response: Response;
     try {
       response = await fetch(`${PISTON_BASE_URL}/execute`, {
         method: 'POST',
@@ -107,9 +138,17 @@ export class CodeExecutionService {
       logger.error({ err }, 'Piston execute request failed to send');
       throw new AppError('AI_PROVIDER_ERROR', 502, 'Failed to reach code execution service');
     }
-
+ */
     if (!response.ok) {
-      throw new AppError('AI_PROVIDER_ERROR', 502, 'Code execution service returned an error');
+      let message = `Code execution service returned status ${response.status}`;
+      try {
+        const body = (await response.json()) as { message?: string };
+        if (body.message) message = body.message;
+      } catch {
+        // non-JSON error body — fall back to the generic status message
+      }
+      logger.error({ status: response.status, message, language: match.language, version: match.version }, 'Piston execute request failed');
+      throw new AppError('AI_PROVIDER_ERROR', 502, message);
     }
 
     const data = (await response.json()) as PistonExecuteResponse;

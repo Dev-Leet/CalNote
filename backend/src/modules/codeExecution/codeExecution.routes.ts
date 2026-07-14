@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { listRuntimes, runCode } from './codeExecution.controller';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 const router = Router();
 router.use(requireAuth);
@@ -20,7 +20,7 @@ const codeExecutionRateLimiter = rateLimit({
   limit: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.userId ?? req.ip ?? 'anonymous',
+  keyGenerator: (req) => req.user?.userId ?? ipKeyGenerator(req.ip ?? ''),
   handler: (_req, res) => {
     res.status(429).json({ code: 'RATE_LIMITED', message: 'Too many code executions — please slow down.' });
   },

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const aiScheduleBodySchema = z.object({
   prompt: z.string().min(1).max(2000),
   provider: z.enum(['ashna', 'custom']).optional(),
+  inputMode: z.enum(['text', 'voice']).default('text'),
   dateRangeHint: z
     .object({
       from: z.string().datetime({ offset: true }).or(z.string().date()),

@@ -80,12 +80,12 @@ export function CalendarGrid({ onSelectEvent, onSelectSlot }: CalendarGridProps)
     return {
       style: {
         backgroundColor: palette.bg,
+        border: `1px solid ${palette.border}`,
         borderLeft: `3px solid ${palette.border}`,
         borderRadius: 'var(--radius-sm)',
         color: palette.text,
         fontSize: '12px',
         fontWeight: 600,
-        padding: '2px 6px',
       },
     };
   }, []);
@@ -129,6 +129,15 @@ export function CalendarGrid({ onSelectEvent, onSelectSlot }: CalendarGridProps)
         components={components}
         culture="en-IN"
         style={{ height: '100%' }}
+        // popup: true (RBC's default) lets react-big-calendar's own overlay
+        // intercept a day-cell click when a day has more events than fit —
+        // that's the ONLY case it should appear now that it's themed above.
+        // A single already-visible event click still calls onSelectEvent
+        // directly, which opens OUR EventDetailPopover — the two don't
+        // conflict, they handle genuinely different interactions (RBC's
+        // overlay = "show me everything on this crowded day", ours =
+        // "show me details for the one event I clicked").
+        popup
       />
     </div>
   );

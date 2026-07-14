@@ -55,3 +55,104 @@ a {
   white-space: nowrap;
   border: 0;
 }
+
+/**
+ * react-big-calendar theming, layered on top of tokens.css's calendar-
+ * specific variables. Split into "overlay/popup" (unchanged from the
+ * earlier overlap fix) and "grid surface" (new — the time-grid slot lines,
+ * now-indicator, and event blocks were never themed before this pass,
+ * which is what made dark mode read as near-black with hard-edged blocks
+ * versus the intended airier, rounded-block look).
+ */
+.rbc-overlay {
+  background: var(--color-bg-surface) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-elevated) !important;
+  padding: 10px !important;
+  z-index: 50 !important;
+}
+
+.rbc-overlay-header {
+  color: var(--color-text-primary) !important;
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 6px !important;
+  font-weight: 600 !important;
+}
+
+.rbc-overlay .rbc-event {
+  color: var(--color-text-primary) !important;
+  background: var(--color-bg-elevated) !important;
+  border-radius: var(--radius-sm) !important;
+  margin-bottom: 4px !important;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view {
+  border-color: var(--color-border-subtle) !important;
+  background: var(--color-bg-primary);
+}
+
+.rbc-header,
+.rbc-date-cell {
+  color: var(--color-text-secondary) !important;
+  border-color: var(--color-border-subtle) !important;
+}
+
+.rbc-off-range-bg {
+  background: var(--color-calendar-off-range) !important;
+}
+
+.rbc-today {
+  background: var(--color-calendar-today-tint) !important;
+}
+
+.rbc-show-more {
+  color: var(--color-accent-ashna) !important;
+  background: transparent !important;
+}
+
+/* Time-grid slot lines — previously fully unthemed, defaulting to RBC's
+   stock near-invisible-on-dark border color. This is the single biggest
+   contributor to the "too flat/dark" look in the original screenshot. */
+.rbc-time-content,
+.rbc-time-header-content,
+.rbc-timeslot-group,
+.rbc-day-slot .rbc-time-slot,
+.rbc-time-gutter,
+.rbc-day-bg + .rbc-day-bg {
+  border-color: var(--color-calendar-grid-line) !important;
+}
+
+.rbc-time-gutter .rbc-timeslot-group {
+  color: var(--color-text-secondary) !important;
+}
+
+/* "Now" indicator line — reference image shows a soft, muted line+dot
+   rather than a hard saturated red. */
+.rbc-current-time-indicator {
+  background-color: var(--color-calendar-now-indicator) !important;
+  height: 2px !important;
+}
+
+/* Event blocks: rounded corners + soft fill, matching the reference
+   image's sage-block aesthetic (translated to this app's accent palette
+   via eventStyleGetter in CalendarGrid.tsx, not hardcoded here — this rule
+   only handles structural sizing/spacing that eventStyleGetter's inline
+   style object can't cleanly express, like consistent internal padding
+   across single vs. multi-day views). */
+.rbc-event {
+  border-radius: var(--radius-sm) !important;
+  padding: 2px 6px !important;
+}
+
+.rbc-event-label {
+  color: var(--color-text-secondary) !important;
+  font-size: 11px !important;
+}
+
+.rbc-day-slot .rbc-event {
+  border: none !important;
+}

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import axios from 'axios';
 import Editor, { BeforeMount } from '@monaco-editor/react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Play, Terminal, Sparkles } from 'lucide-react';
@@ -71,6 +72,14 @@ export function CodeExecutionPanel() {
   const { mutate: run, data: result, isPending, error } = useMutation({
     mutationFn: () => codeExecutionApi.run({ language, code, stdin: stdin || undefined }),
   });
+
+  const runErrorMessage = React.useMemo(() => {
+    if (!error) return null;
+    if (axios.isAxiosError(error)) {
+      return (error.response?.data as { message?: string } | undefined)?.message ?? 'Execution failed. Please try again.';
+    }
+    return 'Execution failed. Please try again.';
+  }, [error]);
 
   // "Ask Ashna about this code" — reuses the Notes & Code Assistant agent
   // (Phase 1's ASHNA_NOTES_CODE_MODEL_ID) against the full editor buffer,
@@ -208,9 +217,7 @@ export function CodeExecutionPanel() {
         {isPending && <LoadingSpinner size={16} label="Executing…" />}
 
         {error && (
-          <p className="m-0 whitespace-pre-wrap text-danger">
-            Execution failed. Please try again.
-          </p>
+          <p className="m-0 whitespace-pre-wrap break-words text-danger">{runErrorMessage}</p>
         )}
 
         {result && !isPending && (

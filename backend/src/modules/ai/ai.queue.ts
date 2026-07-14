@@ -3,8 +3,7 @@ import IORedis from 'ioredis';
 import { AiProviderFactory } from './AiProviderFactory';
 import { SchedulingContext, AiProviderId, NormalizedAiEventResponse } from './IAiSchedulerProvider';
 import { eventService } from '../events/event.service';
-import { NoteModel } from '../../models/Note.model';
-import { toEventServiceInput, wrapPlainTextAsTipTapDoc } from './normalizeForPersistence';
+import { toEventServiceInput } from './normalizeForPersistence';
 import { logger } from '../../utils/logger';
 
 /**
@@ -63,15 +62,6 @@ export const aiScheduleWorker = new Worker<AiScheduleJobData, NormalizedAiEventR
       normalized.events.map(async (evt) => {
         const input = toEventServiceInput(evt, validContestIds);
 
-        let noteId: string | undefined;
-        if (input.rawNoteText) {
-          const note = await NoteModel.create({
-            userId,
-            contentRichText: wrapPlainTextAsTipTapDoc(input.rawNoteText),
-          });
-          noteId = note._id.toString();
-        }
-
         return eventService.createEvent({
           userId,
           title: input.title,
@@ -81,7 +71,6 @@ export const aiScheduleWorker = new Worker<AiScheduleJobData, NormalizedAiEventR
           sourceContestId: input.sourceContestId,
           recurrence: input.recurrence,
           aiReasoning: normalized.reasoning,
-          noteId,
           force: true,
         });
       }),

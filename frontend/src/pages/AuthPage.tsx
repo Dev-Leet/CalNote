@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
- 
+import { AppLogo } from '../components/common/AppLogo';
+
 type Mode = 'login' | 'register';
 
 interface AuthResponse {
@@ -31,7 +32,7 @@ export function AuthPage() {
       const endpoint = mode === 'login' ? '/auth/login' : '/auth/register';
       const { data } = await apiClient.post<AuthResponse>(endpoint, { email, password });
       setSession(data.user, data.accessToken);
-      navigate('/calendar', { replace: true });
+      navigate('/home', { replace: true });
     } catch (err) {
       let message = 'Something went wrong. Please try again.';
       if (axios.isAxiosError(err)) {
@@ -44,28 +45,12 @@ export function AuthPage() {
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        background: 'var(--color-bg-primary)',
-      }}
-    >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: '360px',
-          padding: '32px',
-          borderRadius: '16px',
-          background: 'var(--color-bg-surface)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}
-      >
-        <h1 style={{ fontSize: '20px', color: 'var(--color-text-primary)', margin: 0 }}>
+    <div className="flex h-screen items-center justify-center bg-bg-primary">
+      <form onSubmit={handleSubmit} className="flex w-[360px] flex-col gap-4 rounded-lg bg-bg-surface p-8">
+        <div className="mb-1 flex justify-center">
+          <AppLogo size="lg" showWordmark={false} />
+        </div>
+        <h1 className="m-0 text-center text-xl text-text-primary">
           {mode === 'login' ? 'Log in to CP Calendar Pro' : 'Create your account'}
         </h1>
 
@@ -75,7 +60,7 @@ export function AuthPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={inputStyle}
+          className="rounded-md bg-bg-elevated px-3.5 py-2.5 text-sm text-text-primary outline-none"
         />
         <input
           type="password"
@@ -84,56 +69,42 @@ export function AuthPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={8}
-          style={inputStyle}
+          className="rounded-md bg-bg-elevated px-3.5 py-2.5 text-sm text-text-primary outline-none"
         />
 
-        {error && <p style={{ color: 'var(--color-danger)', fontSize: '13px', margin: 0 }}>{error}</p>}
+        {error && <p className="m-0 text-[13px] text-danger">{error}</p>}
 
-        <button type="submit" disabled={isSubmitting} style={submitStyle(isSubmitting)}>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className={`rounded-md bg-accent-ashna px-3.5 py-2.5 text-sm font-semibold text-bg-primary ${
+            isSubmitting ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          }`}
+        >
           {isSubmitting ? 'Please wait…' : mode === 'login' ? 'Log In' : 'Register'}
         </button>
 
         <button
           type="button"
           onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-          style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', fontSize: '13px', cursor: 'pointer' }}
+          className="bg-transparent p-0 text-[13px] text-text-secondary"
         >
           {mode === 'login' ? "Don't have an account? Register" : 'Already have an account? Log in'}
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
-          <div style={{ flex: 1, height: '1px', background: 'var(--color-bg-elevated)' }} />
-          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>OR</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--color-bg-elevated)' }} />
+        <div className="my-1 flex items-center gap-2.5">
+          <div className="h-px flex-1 bg-bg-elevated" />
+          <span className="text-[11px] text-text-secondary">OR</span>
+          <div className="h-px flex-1 bg-bg-elevated" />
         </div>
 
         <GoogleSignInButton
-          onSuccess={() => navigate('/calendar', { replace: true })}
+          onSuccess={() => navigate('/home', { replace: true })}
           onError={setError}
         />
       </form>
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: '10px 14px',
-  borderRadius: '10px',
-  border: 'none',
-  background: 'var(--color-bg-elevated)',
-  color: 'var(--color-text-primary)',
-  fontSize: '14px',
-};
-
-const submitStyle = (disabled: boolean): React.CSSProperties => ({
-  padding: '10px 14px',
-  borderRadius: '10px',
-  border: 'none',
-  background: 'var(--color-accent-ashna)',
-  color: '#0B0F19',
-  fontWeight: 600,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});
 
 export default AuthPage;

@@ -4,10 +4,9 @@ import { AiProviderId, SchedulingContext, CompactEvent, CompactContest } from '.
 import { eventService } from '../events/event.service';
 import { ContestModel } from '../../models/Contest.model';
 import { UserModel } from '../../models/User.model';
-import { NoteModel } from '../../models/Note.model';
 import { toIST, nowInIST } from '../../utils/timezone';
 import { serializeEvent } from '../../utils/serializers';
-import { toEventServiceInput, wrapPlainTextAsTipTapDoc, buildContestIdSet } from './normalizeForPersistence';
+import { toEventServiceInput, buildContestIdSet } from './normalizeForPersistence';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
 import { aiScheduleQueue } from './ai.queue';
@@ -17,9 +16,10 @@ const SYNC_TIMEOUT_MS = 20_000;
 export async function postAiSchedule(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const userId = req.user!.userId;
-    const { prompt, provider, dateRangeHint } = req.body as {
+    const { prompt, provider, inputMode, dateRangeHint } = req.body as {
       prompt: string;
       provider?: AiProviderId;
+      inputMode: 'text' | 'voice';
       dateRangeHint?: { from: string; to: string };
     };
 
@@ -57,6 +57,7 @@ export async function postAiSchedule(req: Request, res: Response, next: NextFunc
     const context: SchedulingContext = {
       userId,
       prompt,
+      inputMode,
       currentDateTimeIST: nowInIST(),
       existingEvents,
       upcomingContests,
@@ -103,15 +104,14 @@ export async function postAiSchedule(req: Request, res: Response, next: NextFunc
       normalized.events.map(async (evt) => {
         const input = toEventServiceInput(evt, validContestIds);
 
-        let noteId: string | undefined;
-        if (input.rawNoteText) {
-          const note = await NoteModel.create({
-            userId,
-            contentRichText: wrapPlainTextAsTipTapDoc(input.rawNoteText),
-          });
-          noteId = note._id.toString();
-        }
-
+        // Per explicit product decision: AI-generated events no longer
+        // auto-create a Note. If the user's prompt included an inline note
+        // request ("...note: focus on graphs"), that text is preserved on
+        // the event's own aiReasoning-adjacent context implicitly via
+        // `reasoning`, but is NOT silently written into the Notes
+        // collection as if the user authored it themselves. Users now
+        // explicitly opt in to writing a note FOR a given event via the
+        // Notes page's event picker (see notes.service.ts / NotesPage.tsx).
         return eventService.createEvent({
           userId,
           title: input.title,
@@ -121,8 +121,7 @@ export async function postAiSchedule(req: Request, res: Response, next: NextFunc
           sourceContestId: input.sourceContestId,
           recurrence: input.recurrence,
           aiReasoning: normalized.reasoning,
-          noteId,
-          force: true, // AI already reasons about conflicts per system instruction rules 1-3
+          force: true,
         });
       }),
     );

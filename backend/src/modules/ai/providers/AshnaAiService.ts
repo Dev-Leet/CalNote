@@ -17,6 +17,7 @@ export class AshnaAiService implements AiProvider {
 
     const userPayload = JSON.stringify({
       userRequest: context.prompt,
+      inputMode: context.inputMode,
       currentDateTimeIST: context.currentDateTimeIST,
       sleepWindow: context.preferences.sleepWindow,
       existingEvents: context.existingEvents,

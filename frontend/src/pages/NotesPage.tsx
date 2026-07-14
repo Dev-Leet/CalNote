@@ -1,18 +1,25 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { StickyNote, Plus } from 'lucide-react';
+import { StickyNote, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { notesApi } from '../api/notes.api';
 import { NoteEditor } from '../components/notes/NoteEditor';
 import { NotesList } from '../components/notes/NotesList';
+import { EventPicker } from '../components/notes/EventPicker';
 import { EmptyState } from '../components/common/EmptyState';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { EventDto } from '../types/shared';
+
+type ComposerState =
+  | { mode: 'none' }
+  | { mode: 'picking-event' } // choosing which event to write about
+  | { mode: 'editing-standalone' } // note not linked to any event
+  | { mode: 'editing-for-event'; event: EventDto }
+  | { mode: 'editing-existing'; noteId: string };
 
 export function NotesPage() {
   const queryClient = useQueryClient();
-  const [activeNoteId, setActiveNoteId] = useState<string | 'new' | null>(null);
+  const [composer, setComposer] = useState<ComposerState>({ mode: 'none' });
 
-  // Previously inline fetchNotes via apiClient directly — now uses notesApi,
-  // the typed wrapper built specifically for this in an earlier phase.
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['notes'],
     queryFn: () => notesApi.list(),
@@ -23,37 +30,38 @@ export function NotesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] }),
   });
 
-  const activeNote = notes.find((n) => n._id === activeNoteId) ?? null;
+  const activeExistingNote =
+    composer.mode === 'editing-existing' ? notes.find((n) => n._id === composer.noteId) : undefined;
 
   const handleDelete = (noteId: string) => {
     removeNote(noteId);
-    if (activeNoteId === noteId) setActiveNoteId(null);
+    if (composer.mode === 'editing-existing' && composer.noteId === noteId) {
+      setComposer({ mode: 'none' });
+    }
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', height: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ color: 'var(--color-text-primary)', fontSize: '20px', margin: 0 }}>Notes</h1>
-          <button
-            type="button"
-            onClick={() => setActiveNoteId('new')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 12px',
-              borderRadius: '9999px',
-              border: 'none',
-              background: 'var(--color-accent-ashna)',
-              color: '#0B0F19',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={14} /> New
-          </button>
+    <div className="grid h-full grid-cols-[320px_1fr] gap-5">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h1 className="m-0 text-xl text-text-primary">Notes</h1>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setComposer({ mode: 'picking-event' })}
+              title="Write about a specific calendar event"
+              className="flex items-center gap-1 rounded-pill bg-bg-elevated px-3 py-1.5 text-xs font-semibold text-text-primary"
+            >
+              <CalendarIcon size={13} /> For event
+            </button>
+            <button
+              type="button"
+              onClick={() => setComposer({ mode: 'editing-standalone' })}
+              className="flex items-center gap-1 rounded-pill bg-accent-ashna px-3 py-1.5 text-xs font-semibold text-bg-primary"
+            >
+              <Plus size={13} /> New
+            </button>
+          </div>
         </div>
 
         {isLoading && <LoadingSpinner label="Loading notes…" />}
@@ -62,27 +70,54 @@ export function NotesPage() {
           <EmptyState
             icon={StickyNote}
             title="No notes yet"
-            description="Notes you write standalone or attach to calendar events will show up here."
-            action={{ label: 'Write your first note', onClick: () => setActiveNoteId('new') }}
+            description="Write a standalone note, or pick an event to reflect on."
+            action={{ label: 'Write your first note', onClick: () => setComposer({ mode: 'editing-standalone' }) }}
           />
         )}
 
-        {/* Previously inline extractPreview() + note-list JSX — now the extracted component */}
-        <NotesList notes={notes} activeNoteId={activeNoteId} onSelect={setActiveNoteId} onDelete={handleDelete} />
+        <NotesList
+          notes={notes}
+          activeNoteId={composer.mode === 'editing-existing' ? composer.noteId : null}
+          onSelect={(noteId) => setComposer({ mode: 'editing-existing', noteId })}
+          onDelete={handleDelete}
+        />
       </div>
 
       <div>
-        {activeNoteId === 'new' && <NoteEditor onSaved={() => setActiveNoteId(null)} />}
-        {activeNote && (
-          <NoteEditor
-            noteId={activeNote._id}
-            eventId={activeNote.eventId}
-            initialContent={activeNote.contentRichText}
-            onSaved={() => setActiveNoteId(null)}
+        {composer.mode === 'picking-event' && (
+          <EventPicker
+            onSelect={(event) => setComposer({ mode: 'editing-for-event', event })}
+            onCancel={() => setComposer({ mode: 'none' })}
           />
         )}
-        {activeNoteId === null && (
-          <EmptyState icon={StickyNote} title="Select a note" description="Choose a note from the list, or create a new one." />
+
+        {composer.mode === 'editing-standalone' && (
+          <NoteEditor onSaved={() => setComposer({ mode: 'none' })} />
+        )}
+
+        {composer.mode === 'editing-for-event' && (
+          <NoteEditor
+            eventId={composer.event._id}
+            eventTitle={composer.event.title}
+            onSaved={() => setComposer({ mode: 'none' })}
+          />
+        )}
+
+        {composer.mode === 'editing-existing' && activeExistingNote && (
+          <NoteEditor
+            noteId={activeExistingNote._id}
+            eventId={activeExistingNote.eventId}
+            initialContent={activeExistingNote.contentRichText}
+            onSaved={() => setComposer({ mode: 'none' })}
+          />
+        )}
+
+        {composer.mode === 'none' && (
+          <EmptyState
+            icon={StickyNote}
+            title="Select or create a note"
+            description="Choose a note from the list, write a standalone note, or pick an event to write about."
+          />
         )}
       </div>
     </div>

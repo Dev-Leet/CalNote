@@ -52,9 +52,19 @@ export class AuthService {
   }
 
   /**
-   * Issues a new refresh token, persists its HASH (never the raw token) on the
-   * user document alongside device metadata, and returns the raw token to be
-   * set as an httpOnly cookie.
+   * Issues a new refresh token and persists its HASH via an atomic $push,
+   * NOT load-mutate-save. This deliberately does not touch the passed-in
+   * `user` document's own version state — using user.save() here (as the
+   * previous implementation did) meant every caller that ALSO calls
+   * user.save() on the same document within one request (rotateRefreshToken
+   * did exactly this) raced against itself: two saves on one in-memory
+   * document, each bumping Mongoose's optimistic-concurrency version,
+   * where the second save could find the version already stale if any
+   * other request touched the same user in between — producing the
+   * VersionError seen under concurrent/rapid refresh calls (e.g. two tabs,
+   * or React StrictMode's dev-mode double-invoke). An atomic update has no
+   * such race: it either succeeds against whatever the current DB state is,
+   * or (extremely rarely) is a no-op — never a version conflict.
    */
   async issueRefreshToken(user: IUser, deviceId: string): Promise<string> {
     const rawToken = crypto.randomBytes(48).toString('hex');
@@ -62,8 +72,10 @@ export class AuthService {
     const issuedAt = new Date();
     const expiresAt = new Date(issuedAt.getTime() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
 
-    user.refreshTokens.push({ tokenHash, deviceId, issuedAt, expiresAt, revoked: false });
-    await user.save();
+    await UserModel.updateOne(
+      { _id: user._id },
+      { $push: { refreshTokens: { tokenHash, deviceId, issuedAt, expiresAt, revoked: false } } },
+    );
 
     return rawToken;
   }
@@ -89,17 +101,28 @@ export class AuthService {
     }
 
     if (tokenEntry.revoked) {
-      // Reuse of a revoked token — likely theft. Revoke everything.
       logger.warn({ userId: user._id.toString() }, 'Revoked refresh token reuse detected — revoking all sessions');
-      user.refreshTokens.forEach((t) => (t.revoked = true));
-      await user.save();
+      // Atomic positional-array update instead of load-mutate-save, same
+      // rationale as issueRefreshToken above — no version race possible.
+      await UserModel.updateOne(
+        { _id: user._id },
+        { $set: { 'refreshTokens.$[].revoked': true } },
+      );
       throw new AppError('REFRESH_TOKEN_INVALID_OR_REVOKED', 401, 'Refresh token reuse detected');
     }
 
-    tokenEntry.revoked = true;
+    // Atomic positional update targeting the exact matched array element by
+    // tokenHash, avoiding the load-mutate-save race entirely — this and the
+    // $push inside issueRefreshToken() (called next) are now the ONLY two
+    // writes involved, both atomic, both independent of each other's
+    // document version.
+    await UserModel.updateOne(
+      { _id: user._id, 'refreshTokens.tokenHash': tokenHash },
+      { $set: { 'refreshTokens.$.revoked': true } },
+    );
+
     const newRawRefreshToken = await this.issueRefreshToken(user, deviceId);
     const newAccessToken = this.generateAccessToken(user);
-    await user.save();
 
     return {
       user,

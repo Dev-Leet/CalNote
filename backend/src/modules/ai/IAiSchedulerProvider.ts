@@ -28,7 +28,8 @@ export interface SchedulingPreferences {
 export interface SchedulingContext {
   userId: string;
   prompt: string;
-  currentDateTimeIST: string; // ISO 8601, IST offset
+  inputMode: 'text' | 'voice';
+  currentDateTimeIST: string;
   existingEvents: CompactEvent[];
   upcomingContests: CompactContest[];
   preferences: SchedulingPreferences;

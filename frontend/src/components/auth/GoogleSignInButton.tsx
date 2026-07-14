@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import apiClient from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-
 interface GoogleSignInButtonProps {
   onSuccess: () => void;
   onError: (message: string) => void;

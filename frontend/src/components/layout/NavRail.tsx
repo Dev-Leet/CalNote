@@ -1,8 +1,10 @@
-
-import { NavLink } from 'react-router-dom';
-import { Calendar, Trophy, StickyNote, Code2, Settings, LogOut } from 'lucide-react';
+import React from 'react';
+import { NavLink, Link } from 'react-router-dom';
+import { Home, Calendar, Trophy, StickyNote, Code2, Settings, LogOut } from 'lucide-react';
+import { AppLogo } from '../common/AppLogo';
 
 const NAV_ITEMS = [
+  { to: '/home', label: 'Home', icon: Home, end: true },
   { to: '/calendar', label: 'Calendar', icon: Calendar },
   { to: '/contests', label: 'Contests', icon: Trophy },
   { to: '/notes', label: 'Notes', icon: StickyNote },
@@ -18,10 +20,15 @@ interface NavRailProps {
 export function NavRail({ onLogout, userEmail }: NavRailProps) {
   return (
     <nav className="flex w-[72px] flex-col items-center gap-2 border-r border-border-subtle py-5">
-      {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+      <Link to="/home" className="mb-3" title="CP Calendar Pro">
+        <AppLogo size="sm" showWordmark={false} />
+      </Link>
+
+      {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
+          end={end}
           title={label}
           className={({ isActive }) =>
             `flex h-11 w-11 items-center justify-center rounded-md transition-colors ${

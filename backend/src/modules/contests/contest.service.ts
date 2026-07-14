@@ -21,6 +21,11 @@ export interface ContestQueryFilters {
   platform?: string;
   from?: Date;
   to?: Date;
+  /** When false (default), contests that have already ended are excluded
+   *  regardless of `from`/`to` — matches the product decision that finished
+   *  contests shouldn't clutter the list. Set true only for a future
+   *  "contest history" view, not currently exposed via any route. */
+  includePast?: boolean;
 }
 
 export class ContestService {
@@ -69,6 +74,7 @@ export class ContestService {
       }
     }
 
+    await this.purgeStaleContests();
     await this.invalidateContestCache();
 
     const result: ScrapeCycleResult = {
@@ -80,6 +86,21 @@ export class ContestService {
 
     logger.info(result, 'Contest scrape cycle complete');
     return result;
+  }
+
+  /**
+   * Deletes contest documents that ended more than 7 days ago. Safe to run
+   * — Event.sourceContestId is a loose reference used only at AI-context-
+   * build time (never joined/populated later for display), so removing old
+   * contest rows doesn't orphan or break any existing Event.
+   */
+  async purgeStaleContests(): Promise<number> {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const result = await ContestModel.deleteMany({ endTime: { $lt: cutoff } });
+    if (result.deletedCount > 0) {
+      logger.info({ deletedCount: result.deletedCount }, 'Purged stale (7+ day old) contests');
+    }
+    return result.deletedCount ?? 0;
   }
 
   async invalidateContestCache(): Promise<void> {
@@ -94,7 +115,7 @@ export class ContestService {
   }
 
   async getContests(filters: ContestQueryFilters): Promise<ContestLike[]> {
-    const cacheKey = `${CONTEST_CACHE_PREFIX}${filters.platform ?? 'all'}:${filters.from?.toISOString() ?? ''}:${filters.to?.toISOString() ?? ''}`;
+    const cacheKey = `${CONTEST_CACHE_PREFIX}${filters.platform ?? 'all'}:${filters.from?.toISOString() ?? ''}:${filters.to?.toISOString() ?? ''}:${filters.includePast ? 'past' : 'upcoming'}`;
 
     try {
       const cached = await redisClient.get(cacheKey);
@@ -123,9 +144,14 @@ export class ContestService {
         ...(filters.to && { $lte: filters.to }),
       };
     }
+    // Hard baseline regardless of from/to: a contest whose endTime has
+    // already passed is never returned by default. Applied via endTime
+    // (not startTime) so a currently-live contest (started, not yet ended)
+    // still correctly shows up.
+    if (!filters.includePast) {
+      query.endTime = { $gte: new Date() };
+    }
 
-    // .lean() results structurally satisfy ContestLike (same field shapes,
-    // extra Mongoose metadata is harmless on a return value) — no cast needed.
     const contests = await ContestModel.find(query).sort({ startTime: 1 }).limit(200).lean().exec();
 
     try {

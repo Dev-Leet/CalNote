@@ -26,6 +26,7 @@ function buildGeminiContents(context: SchedulingContext): string {
   const payload = {
     instruction: 'Generate calendar events for the following scheduling request, using the context provided.',
     userRequest: context.prompt,
+    inputMode: context.inputMode,
     currentDateTimeIST: context.currentDateTimeIST,
     sleepWindow: context.preferences.sleepWindow,
     existingEvents: context.existingEvents,

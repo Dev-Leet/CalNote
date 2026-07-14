@@ -1,6 +1,6 @@
-
+import React from 'react';
 import { Sparkles } from 'lucide-react';
- 
+
 interface AiReasoningTooltipProps {
   reasoning: string;
   providerLabel?: string;
@@ -8,24 +8,13 @@ interface AiReasoningTooltipProps {
 
 export function AiReasoningTooltip({ reasoning, providerLabel }: AiReasoningTooltipProps) {
   return (
-    <div
-      style={{
-        padding: '12px 14px',
-        borderRadius: '10px',
-        background: 'var(--color-bg-elevated)',
-        display: 'flex',
-        gap: '8px',
-        alignItems: 'flex-start',
-      }}
-    >
-      <Sparkles size={14} style={{ marginTop: '2px', flexShrink: 0, color: 'var(--color-accent-ashna)' }} aria-hidden="true" />
+    <div className="flex items-start gap-2 rounded-md bg-bg-elevated px-3.5 py-3">
+      <Sparkles size={14} className="mt-0.5 flex-shrink-0 text-accent-ashna" />
       <div>
         {providerLabel && (
-          <p style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--color-text-secondary)', margin: '0 0 4px', fontWeight: 700 }}>
-            {providerLabel}
-          </p>
+          <p className="mb-1 text-[11px] font-bold uppercase text-text-secondary">{providerLabel}</p>
         )}
-        <p style={{ fontSize: '13px', color: 'var(--color-text-primary)', margin: 0, fontStyle: 'italic' }}>{reasoning}</p>
+        <p className="m-0 whitespace-pre-wrap break-words text-[13px] italic text-text-primary">{reasoning}</p>
       </div>
     </div>
   );

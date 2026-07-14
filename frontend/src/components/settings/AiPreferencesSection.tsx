@@ -2,35 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../api/client';
 import { useAiProviderStore } from '../../stores/aiProviderStore';
-
-interface PreferencesDto {
-  defaultAiProvider: 'ashna' | 'custom';
-  sleepWindow: { start: string; end: string };
-  timezone: 'Asia/Kolkata';
-  notifyBeforeContestMins: number;
-  customAiConfig?: { endpoint: string; model: string; hasApiKey: boolean };
-}
+import { UserPreferencesDto } from '../../types/shared';
 
 interface UpdatePreferencesPayload {
   defaultAiProvider?: 'ashna' | 'custom';
   customAiConfig?: { endpoint: string; apiKey: string; model: string };
 }
 
-async function savePreferences(payload: UpdatePreferencesPayload): Promise<PreferencesDto> {
-  const { data } = await apiClient.patch<{ preferences: PreferencesDto }>('/users/me/preferences', payload);
+async function savePreferences(payload: UpdatePreferencesPayload): Promise<UserPreferencesDto> {
+  const { data } = await apiClient.patch<{ preferences: UserPreferencesDto }>('/users/me/preferences', payload);
   return data.preferences;
 }
 
 interface AiPreferencesSectionProps {
-  preferences: PreferencesDto;
+  preferences: UserPreferencesDto;
 }
 
-/**
- * Owns everything related to WHICH AI runs scheduling and how the Custom
- * (Gemini) Agent is configured. Split out of the former monolithic
- * SettingsPage per Section 7.6 — SchedulingPreferencesSection owns the
- * sleep window / notification timing half instead.
- */
 export function AiPreferencesSection({ preferences }: AiPreferencesSectionProps) {
   const queryClient = useQueryClient();
   const setGlobalProvider = useAiProviderStore((s) => s.setProvider);
@@ -84,116 +71,95 @@ export function AiPreferencesSection({ preferences }: AiPreferencesSectionProps)
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="flex flex-col gap-5">
       {savedMessage && (
-        <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--color-success)', color: '#0B0F19', fontSize: '13px' }}>
-          {savedMessage}
-        </div>
+        <div className="rounded-md bg-success px-3.5 py-2.5 text-[13px] text-bg-primary">{savedMessage}</div>
       )}
 
-      <form onSubmit={handleSaveProvider} style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>Default AI Provider</h2>
+      <form onSubmit={handleSaveProvider} className="flex flex-col gap-4 rounded-lg bg-bg-surface p-5">
+        <h2 className="m-0 text-base text-text-primary">Default AI Provider</h2>
 
-        <Field label="Provider">
-          <select value={defaultProvider} onChange={(e) => setDefaultProvider(e.target.value as 'ashna' | 'custom')} style={inputStyle}>
+        <label className="flex flex-col gap-1.5 text-[13px] text-text-secondary">
+          Provider
+          <select
+            value={defaultProvider}
+            onChange={(e) => setDefaultProvider(e.target.value as 'ashna' | 'custom')}
+            className="w-full rounded-sm bg-bg-elevated px-3 py-2.5 text-sm text-text-primary"
+          >
             <option value="ashna">Ashna AI</option>
             <option value="custom">Custom AI Agent</option>
           </select>
-        </Field>
+        </label>
 
-        <button type="submit" disabled={isSavingProvider} style={submitStyle(isSavingProvider)}>
+        <button
+          type="submit"
+          disabled={isSavingProvider}
+          className={`self-start rounded-pill bg-accent-ashna px-5 py-2.5 text-sm font-semibold text-bg-primary ${
+            isSavingProvider ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          }`}
+        >
           {isSavingProvider ? 'Saving…' : 'Save Provider'}
         </button>
       </form>
 
-      <form onSubmit={handleSaveGemini} style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>Custom AI Agent (Gemini) Configuration</h2>
+      <form onSubmit={handleSaveGemini} className="flex flex-col gap-4 rounded-lg bg-bg-surface p-5">
+        <h2 className="m-0 text-base text-text-primary">Custom AI Agent (Gemini) Configuration</h2>
         {preferences.customAiConfig?.hasApiKey && (
-          <p style={{ fontSize: '12px', color: 'var(--color-success)', margin: 0 }}>
+          <p className="m-0 text-xs text-success">
             An API key is currently configured. Submitting a new key below will replace it.
           </p>
         )}
 
-        <Field label="Model">
-          <select value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} style={inputStyle}>
+        <label className="flex flex-col gap-1.5 text-[13px] text-text-secondary">
+          Model
+          <select
+            value={geminiModel}
+            onChange={(e) => setGeminiModel(e.target.value)}
+            className="w-full rounded-sm bg-bg-elevated px-3 py-2.5 text-sm text-text-primary"
+          >
             <option value="gemini-2.5-flash">gemini-2.5-flash (fast, default)</option>
             <option value="gemini-2.5-pro">gemini-2.5-pro (complex reasoning)</option>
           </select>
-        </Field>
+        </label>
 
-        <Field label="Endpoint">
+        <label className="flex flex-col gap-1.5 text-[13px] text-text-secondary">
+          Endpoint
           <input
             type="url"
             placeholder="https://generativelanguage.googleapis.com"
             value={geminiEndpoint}
             onChange={(e) => setGeminiEndpoint(e.target.value)}
-            style={inputStyle}
+            className="w-full rounded-sm bg-bg-elevated px-3 py-2.5 text-sm text-text-primary"
           />
-        </Field>
+        </label>
 
-        <Field label="API Key">
+        <label className="flex flex-col gap-1.5 text-[13px] text-text-secondary">
+          API Key
           <input
             type="password"
             placeholder="Enter to set or replace your Gemini API key"
             value={geminiApiKey}
             onChange={(e) => setGeminiApiKey(e.target.value)}
-            style={inputStyle}
             autoComplete="off"
+            className="w-full rounded-sm bg-bg-elevated px-3 py-2.5 text-sm text-text-primary"
           />
-        </Field>
-        <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', margin: 0 }}>
+        </label>
+        <p className="m-0 text-xs text-text-secondary">
           Your key is encrypted before storage and never displayed again — this field is write-only.
         </p>
 
-        <button type="submit" disabled={isSavingGemini || !geminiApiKey.trim()} style={submitStyle(isSavingGemini || !geminiApiKey.trim())}>
+        <button
+          type="submit"
+          disabled={isSavingGemini || !geminiApiKey.trim()}
+          className={`self-start rounded-pill bg-accent-ashna px-5 py-2.5 text-sm font-semibold text-bg-primary ${
+            isSavingGemini || !geminiApiKey.trim() ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          }`}
+        >
           {isSavingGemini ? 'Saving…' : 'Save Custom AI Config'}
         </button>
       </form>
     </div>
   );
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-      {label}
-      {children}
-    </label>
-  );
-}
-
-const sectionStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '16px',
-  padding: '20px',
-  borderRadius: '14px',
-  background: 'var(--color-bg-surface)',
-};
-
-const sectionTitleStyle: React.CSSProperties = { fontSize: '16px', color: 'var(--color-text-primary)', margin: 0 };
-
-const inputStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  borderRadius: '8px',
-  border: 'none',
-  background: 'var(--color-bg-elevated)',
-  color: 'var(--color-text-primary)',
-  fontSize: '14px',
-  width: '100%',
-};
-
-const submitStyle = (disabled: boolean): React.CSSProperties => ({
-  alignSelf: 'flex-start',
-  padding: '10px 20px',
-  borderRadius: '9999px',
-  border: 'none',
-  background: 'var(--color-accent-ashna)',
-  color: '#0B0F19',
-  fontWeight: 600,
-  fontSize: '14px',
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});
 
 export default AiPreferencesSection;

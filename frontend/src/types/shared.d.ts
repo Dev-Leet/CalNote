@@ -53,9 +53,12 @@ export interface NoteDto {
 
 export interface UserPreferencesDto {
   defaultAiProvider: AiProviderType;
-  sleepWindow: { start: string; end: string };
+  // Optional per the SchedulingPreferencesSection undefined-safety fix —
+  // legacy user documents may not have this populated. Every consumer must
+  // handle the undefined case (fallback defaults), not assume it's always present.
+  sleepWindow?: { start: string; end: string };
   timezone: 'Asia/Kolkata';
-  notifyBeforeContestMins: number;
+  notifyBeforeContestMins?: number;
   customAiConfig?: { endpoint: string; model: string; hasApiKey: boolean };
 }
 
