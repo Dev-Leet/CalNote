@@ -1,8 +1,8 @@
 import apiClient from './client';
 
-export interface RuntimeOption {
+export interface LanguageOption {
   language: string;
-  version: string;
+  label: string;
 }
 
 export interface RunCodePayload {
@@ -12,18 +12,18 @@ export interface RunCodePayload {
 }
 
 export interface RunCodeResult {
-  language: string;
-  version: string;
   stdout: string;
   stderr: string;
   exitCode: number;
   timedOut: boolean;
+  providerUsed: string;
+  isSimulated?: boolean;
 }
 
 export const codeExecutionApi = {
-  async listRuntimes(): Promise<RuntimeOption[]> {
-    const { data } = await apiClient.get<{ runtimes: RuntimeOption[] }>('/code-execution/runtimes');
-    return data.runtimes;
+  async listRuntimes(): Promise<LanguageOption[]> {
+    const { data } = await apiClient.get<{ languages: LanguageOption[] }>('/code-execution/runtimes');
+    return data.languages;
   },
 
   async run(payload: RunCodePayload): Promise<RunCodeResult> {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 
 interface AppLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -12,32 +12,57 @@ const SIZE_MAP = {
 };
 
 /**
- * Placeholder logo mark, used everywhere the app currently shows a
- * brand/logo slot (NavRail top, LandingPage header, AuthPage). Swap the
- * <div> mark below for an <img src="/logo.svg" ... /> once a real asset
- * exists — every consumer of this component picks up the change
- * automatically, since none of them render a logo directly.
+ * Real logo assets, served from Vite's `public/` directory (files there are
+ * copied as-is to the build root, so /assets/... resolves correctly both in
+ * dev and in the production build — no import needed for static public
+ * assets).
  *
- * Deliberately styled as an OBVIOUS placeholder (dashed border, muted
- * "LOGO" label) rather than a plausible-looking generic icon — the goal is
- * that it's impossible to mistake for a finished asset and ship by accident.
+ * Interaction: clicking the static image swaps it for the video in the
+ * exact same slot (same box, same aspect handling via object-cover), the
+ * video autoplays muted (required for autoplay to be allowed by browsers
+ * without a prior user gesture on the <video> element itself — the click
+ * that triggered this IS the gesture, but autoplay policies are keyed to
+ * the play() call needing the tag itself unmuted-safe; muted keeps this
+ * robust across browsers), and onEnded reverts back to the static image.
  */
 export function AppLogo({ size = 'md', showWordmark = true }: AppLogoProps) {
   const { box, text } = SIZE_MAP[size];
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleImageClick = () => {
+    setIsPlaying(true);
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+  };
 
   return (
     <div className="flex items-center gap-2.5">
-      <div
-        className={`${box} flex flex-shrink-0 items-center justify-center rounded-md border-2 border-dashed border-accent-ashna/50 bg-accent-ashna-tint`}
-        aria-label="CP Calendar Pro logo placeholder"
-      >
-        <span className="text-[9px] font-bold uppercase leading-none tracking-wide text-accent-ashna">
-          Logo
-        </span>
+      <div className={`${box} flex-shrink-0 overflow-hidden rounded-md`}>
+        {isPlaying ? (
+          <video
+            ref={videoRef}
+            src="/assets/LOGO_Video.mp4"
+            className="h-full w-full object-cover"
+            autoPlay
+            muted
+            playsInline
+            onEnded={handleVideoEnded}
+            aria-label="CP Calendar Pro logo animation"
+          />
+        ) : (
+          <img
+            src="/assets/LOGO.png"
+            alt="CP Calendar Pro logo"
+            onClick={handleImageClick}
+            className="h-full w-full cursor-pointer object-cover"
+            title="Click to play"
+          />
+        )}
       </div>
-      {showWordmark && (
-        <span className={`${text} font-bold text-text-primary`}>CP Calendar Pro</span>
-      )}
+      {showWordmark && <span className={`${text} font-bold text-text-primary`}>CP Calendar Pro</span>}
     </div>
   );
 }

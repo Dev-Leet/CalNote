@@ -15,10 +15,11 @@ const googleSignInSchema = z.object({
 });
 router.post('/signin', authRateLimiter, validate(googleSignInSchema), googleSignIn);
 
-// requireAuth: the user must already be logged into CP Calendar Pro before
-// starting the Google Calendar linking flow — this is an account-linking
-// action, not a login mechanism.
-router.get('/consent', requireAuth, getGoogleConsent);
+// NOT requireAuth: this route is reached via a full browser navigation,
+// which cannot carry the Authorization header requireAuth checks for.
+// getGoogleConsent identifies the user via the refresh cookie instead —
+// see the detailed comment on that function.
+router.get('/consent', getGoogleConsent);
 
 // No requireAuth here — Google redirects the browser directly to this route
 // with no Authorization header attached. Identity is recovered via the

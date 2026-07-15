@@ -29,6 +29,16 @@ const envSchema = z.object({
 
   GEMINI_API_KEY: z.string().min(1),
 
+  // Code execution provider cascade — all optional. runCode() gracefully
+  // skips any provider whose key is absent rather than treating it as a
+  // startup-blocking requirement, since even a single configured provider
+  // (plus the always-available Ashna simulated fallback) keeps the feature
+  // functional.
+  JDOODLE_CLIENT_ID: z.string().optional(),
+  JDOODLE_CLIENT_SECRET: z.string().optional(),
+  ONECOMPILER_API_KEY: z.string().optional(),
+  CODEX_RAPIDAPI_KEY: z.string().optional(),
+
   ASHNA_API_KEY: z.string().min(1),
   ASHNA_API_BASE_URL: z.string().url().default('https://api.ashna.ai/v1/api'),
   // Two distinct Ashna agent/model IDs, one per role — each configured with

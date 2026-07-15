@@ -48,6 +48,7 @@ export function AiPreferencesSection({ preferences }: AiPreferencesSectionProps)
       setGlobalProvider(data.defaultAiProvider);
       flashSaved('Default AI provider saved');
     },
+    onError: () => flashSaved('Failed to save — please try again'),
   });
 
   const { mutate: mutateGemini, isPending: isSavingGemini } = useMutation({
@@ -57,6 +58,7 @@ export function AiPreferencesSection({ preferences }: AiPreferencesSectionProps)
       setGeminiApiKey('');
       flashSaved('Custom AI Agent configuration saved');
     },
+    onError: () => flashSaved('Failed to save — please try again'),
   });
 
   const handleSaveProvider = (e: React.FormEvent) => {

@@ -41,6 +41,14 @@ export function SchedulingPreferencesSection({ preferences }: SchedulingPreferen
       setSavedMessage('Scheduling preferences saved');
       setTimeout(() => setSavedMessage(null), 3000);
     },
+    onError: () => {
+      // Previously this failure was completely silent — the save mutation
+      // had no onError handler at all, so a failed persist (e.g. the
+      // VersionError race fixed above) left the user with no indication
+      // anything went wrong until the value reverted on a later refetch.
+      setSavedMessage('Failed to save — please try again');
+      setTimeout(() => setSavedMessage(null), 4000);
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {

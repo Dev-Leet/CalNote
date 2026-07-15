@@ -9,10 +9,14 @@ import { REFRESH_COOKIE_NAME, REFRESH_COOKIE_OPTS } from './authCookies';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
 
+function hashToken(rawToken: string): string {
+  return crypto.createHash('sha256').update(rawToken).digest('hex');
+}
+
 const OAUTH_STATE_PREFIX = 'oauth:google:state:';
 const OAUTH_STATE_TTL_SECONDS = 5 * 60; // 5 minutes — matches the previous in-memory expiry window
 
-export async function getGoogleConsent(req: Request, res: Response, next: NextFunction): Promise<void> {
+/* export async function getGoogleConsent(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const state = crypto.randomUUID();
 
@@ -27,8 +31,39 @@ export async function getGoogleConsent(req: Request, res: Response, next: NextFu
   } catch (err) {
     next(err);
   }
-}
+} */
 
+/**
+ * Reached via a full browser navigation (window.location.href), NOT a
+ * fetch/axios call — this is required so Google's own consent-page redirect
+ * can take over the tab. That means requireAuth's header-based JWT check
+ * CANNOT work here: a plain navigation has no way to attach an
+ * Authorization header. Instead, this identifies the user via the httpOnly
+ * refreshToken cookie, exactly like POST /auth/refresh already does, since
+ * that cookie IS automatically sent on a same-origin top-level navigation.
+ */
+export async function getGoogleConsent(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const rawRefreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+    if (!rawRefreshToken) {
+      throw new AppError('UNAUTHORIZED', 401, 'You must be logged in to link Google Calendar. Please log in and try again.');
+    }
+
+    const tokenHash = hashToken(rawRefreshToken);
+    const user = await UserModel.findOne({ 'refreshTokens.tokenHash': tokenHash });
+    if (!user) {
+      throw new AppError('UNAUTHORIZED', 401, 'Your session has expired. Please log in again.');
+    }
+
+    const state = crypto.randomUUID();
+    await redisClient.set(`${OAUTH_STATE_PREFIX}${state}`, user._id.toString(), { EX: OAUTH_STATE_TTL_SECONDS });
+
+    const consentUrl = getGoogleConsentUrl(state);
+    res.redirect(consentUrl);
+  } catch (err) {
+    next(err);
+  }
+}
 export async function googleOAuthCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { code, state, error } = req.query as { code?: string; state?: string; error?: string };

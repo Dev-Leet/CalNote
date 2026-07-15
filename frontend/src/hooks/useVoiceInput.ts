@@ -1,23 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-function mapSpeechErrorToMessage(errorCode: string): string {
-  switch (errorCode) {
-    case 'not-allowed':
-    case 'service-not-allowed':
-      return 'Microphone access was denied. Check your browser\'s site permissions and try again.';
-    case 'network':
-      return 'Voice recognition couldn\'t reach its speech service — this is usually caused by running over plain HTTP instead of HTTPS, or a network/firewall blocking the connection. Typed input still works normally.';
-    case 'no-speech':
-      return 'No speech was detected. Try again and speak clearly into your microphone.';
-    case 'audio-capture':
-      return 'No microphone was found. Check that a microphone is connected and enabled.';
-    case 'aborted':
-      return ''; // user-initiated stop — not a real error, don't show one
-    default:
-      return `Voice recognition error (${errorCode}). Typed input still works normally.`;
-  }
-}
-
 interface UseVoiceInputResult {
   isSupported: boolean;
   isListening: boolean;
@@ -28,11 +10,26 @@ interface UseVoiceInputResult {
   resetTranscript: () => void;
 }
 
+function mapSpeechErrorToMessage(errorCode: string): string {
+  switch (errorCode) {
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return "Microphone access was denied. Check your browser's site permissions and try again.";
+    case 'network':
+      return "Voice recognition couldn't reach its speech service — this is usually caused by running over plain HTTP instead of HTTPS, or a network/firewall blocking the connection. Typed input still works normally.";
+    case 'no-speech':
+      return 'No speech was detected. Try again and speak clearly into your microphone.';
+    case 'audio-capture':
+      return 'No microphone was found. Check that a microphone is connected and enabled.';
+    case 'aborted':
+      return '';
+    default:
+      return `Voice recognition error (${errorCode}). Typed input still works normally.`;
+  }
+}
+
 /**
- * Thin wrapper around the browser's native SpeechRecognition API (webkit-
- * prefixed in Chrome/Edge, the two browsers this app's mockups target).
- * No external speech-to-text service or API key required — this is
- * intentionally NOT routed through Ashna or any backend; only the final
+ * Thin wrapper around the browser's native SpeechRecognition API. Only the
  * TEXT transcript is ever sent server-side, never audio.
  */
 export function useVoiceInput(): UseVoiceInputResult {
@@ -41,10 +38,8 @@ export function useVoiceInput(): UseVoiceInputResult {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  const SpeechRecognitionCtor =
-    typeof window !== 'undefined'
-      ? window.SpeechRecognition ?? window.webkitSpeechRecognition
-      : undefined;
+  const SpeechRecognitionCtor: (new () => SpeechRecognition) | undefined =
+    typeof window !== 'undefined' ? window.SpeechRecognition ?? window.webkitSpeechRecognition : undefined;
 
   const isSupported = !!SpeechRecognitionCtor;
 
@@ -54,19 +49,29 @@ export function useVoiceInput(): UseVoiceInputResult {
     const recognition = new SpeechRecognitionCtor();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = 'en-IN'; // matches the app's IST/en-IN locale convention
+    recognition.lang = 'en-IN';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalText = '';
       let interimText = '';
+
+      // Correct two-level access: event.results[i] is a SpeechRecognitionResult
+      // (this is where .isFinal actually lives); event.results[i][0] is a
+      // SpeechRecognitionAlternative (only .transcript/.confidence, NO
+      // .isFinal). The original bug was annotating the alternative's type
+      // as if it were the flattened shape — fixed by reading .isFinal off
+      // the correct (outer) object and letting the alternative's type be
+      // inferred rather than manually mis-annotated.
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i][0];
-        if (event.results[i].isFinal) {
-          finalText += result.transcript;
+        const result = event.results[i];
+        const alternative = result[0];
+        if (result.isFinal) {
+          finalText += alternative.transcript;
         } else {
-          interimText += result.transcript;
+          interimText += alternative.transcript;
         }
       }
+
       setTranscript((prev) => (finalText ? prev + finalText : prev) + (interimText ? ` ${interimText}`.trimStart() : ''));
     };
 
@@ -90,12 +95,6 @@ export function useVoiceInput(): UseVoiceInputResult {
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
 
-    // The Web Speech API's recognition backend runs over the network (it is
-    // NOT fully on-device, despite living in the browser) and requires a
-    // secure context. Over plain http://localhost, some Chrome/Edge
-    // versions silently fail to establish that connection and report the
-    // generic 'network' error rather than a secure-context-specific one —
-    // checking this upfront turns an opaque failure into an actionable message.
     if (!window.isSecureContext) {
       setError('Voice input requires a secure connection (HTTPS). It will not work over plain http://localhost in some browsers — try https://localhost or a deployed HTTPS URL.');
       return;
@@ -107,8 +106,7 @@ export function useVoiceInput(): UseVoiceInputResult {
       recognitionRef.current.start();
       setIsListening(true);
     } catch {
-      // start() throws if already started — safe to ignore, onend/onerror
-      // will correct isListening state if something is genuinely wrong.
+      // start() throws if already started — safe to ignore.
     }
   }, []);
 

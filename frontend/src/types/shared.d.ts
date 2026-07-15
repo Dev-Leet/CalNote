@@ -51,6 +51,7 @@ export interface NoteDto {
   updatedAt: string;
 }
 
+declare const SpeechRecognition: { new (): SpeechRecognition };
 export interface UserPreferencesDto {
   defaultAiProvider: AiProviderType;
   // Optional per the SchedulingPreferencesSection undefined-safety fix —

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { listRuntimes, runCode } from './codeExecution.controller';
+import { listSupportedLanguages, runCode } from './codeExecution.controller';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 const router = Router();
@@ -26,7 +26,7 @@ const codeExecutionRateLimiter = rateLimit({
   },
 });
 
-router.get('/runtimes', listRuntimes);
+router.get('/runtimes', listSupportedLanguages);
 
 const runCodeSchema = z.object({
   language: z.string().min(1).max(50),
