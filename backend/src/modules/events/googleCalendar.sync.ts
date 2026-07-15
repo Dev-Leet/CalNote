@@ -164,12 +164,12 @@ export class GoogleCalendarSyncService {
    * token on the user document. Called from the /auth/google/callback route.
    */
   async linkAccount(userId: string, refreshToken: string): Promise<void> {
-    const { UserModel } = await import('../../models/User.model');
+    const { UserModel } = await import('../../models/User.model.js');
     await UserModel.updateOne({ _id: userId }, { $set: { googleRefreshToken: refreshToken } });
   }
 
   async unlinkAccount(userId: string): Promise<void> {
-    const { UserModel } = await import('../../models/User.model');
+    const { UserModel } = await import('../../models/User.model.js');
     await UserModel.updateOne({ _id: userId }, { $unset: { googleRefreshToken: '' } });
   }
 }
