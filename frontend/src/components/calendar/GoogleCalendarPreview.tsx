@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { CalendarClock } from 'lucide-react';
 import { useGoogleCalendarEventsQuery } from '../../queries/useGoogleCalendarEventsQuery';
 import { LoadingSpinner } from '../common/LoadingSpinner';

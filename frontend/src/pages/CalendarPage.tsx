@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CalendarGrid, CalendarEventVM } from '../components/calendar/CalendarGrid';
 import { AiChatPanel } from '../components/ai/AiChatPanel';
 import { GoogleCalendarPreview } from '../components/calendar/GoogleCalendarPreview';

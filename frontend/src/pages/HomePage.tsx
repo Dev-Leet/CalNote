@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useAuthStore } from '../stores/authStore';
 import { useDashboardSummaryQuery } from '../queries/useDashboardSummaryQuery';
 import { UpcomingEventsCard } from '../components/dashboard/UpcomingEventsCard';

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, Search, X } from 'lucide-react';
 import { eventsApi } from '../../api/events.api';

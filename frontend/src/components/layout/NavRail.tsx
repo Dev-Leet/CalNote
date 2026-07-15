@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { NavLink, Link } from 'react-router-dom';
 import { Home, Calendar, Trophy, StickyNote, Code2, Settings, LogOut } from 'lucide-react';
 import { AppLogo } from '../common/AppLogo';

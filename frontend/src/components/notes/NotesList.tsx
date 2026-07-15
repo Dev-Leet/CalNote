@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { NoteDto } from '../../types/shared';
 import { formatISTDate } from '../../utils/formatters';
 

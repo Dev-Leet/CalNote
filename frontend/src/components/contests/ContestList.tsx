@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Trophy } from 'lucide-react';
 import { ContestCard, ContestVM } from './ContestCard';
 import { PlatformFilterBar } from './PlatformFilterBar';

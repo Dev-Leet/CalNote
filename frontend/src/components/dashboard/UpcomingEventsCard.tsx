@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Calendar } from 'lucide-react';
 import { DashboardCard } from './DashboardCard';
 import { EmptyState } from '../common/EmptyState';

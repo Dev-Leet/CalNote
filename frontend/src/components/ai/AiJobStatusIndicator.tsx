@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAiJobStatusQuery } from '../../queries/useAiJobStatusQuery';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 

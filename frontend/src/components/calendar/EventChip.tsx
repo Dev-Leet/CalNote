@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Sparkles } from 'lucide-react';
 import type { CalendarEventVM } from './CalendarGrid';
 import { truncate } from '../../utils/formatters';

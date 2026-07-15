@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Link } from 'react-router-dom';
 import { Calendar, StickyNote, Code2, Sparkles } from 'lucide-react';
 import { AppLogo } from '../components/common/AppLogo';

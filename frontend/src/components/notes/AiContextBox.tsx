@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { X, MessageSquare, AlertTriangle, Sparkles, HelpCircle } from 'lucide-react';
 import { notesAiApi, NotesAiInstruction } from '../../api/notesAi.api';

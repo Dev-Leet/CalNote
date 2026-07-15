@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Search, HelpCircle } from 'lucide-react';
 import { HELP_SECTIONS } from '../data/helpContent';
 import { EmptyState } from '../components/common/EmptyState';
