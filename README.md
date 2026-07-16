@@ -1,6 +1,9 @@
 <div align="center">
   <h1>📅 CP Calendar Pro (CalNote)</h1>
   <p><strong>A Next-Generation AI-Powered Scheduling Assistant for Competitive Programmers</strong></p>
+  <a href = "https://calnote.pages.dev/"><b><i>Frontend: https://calnote.pages.dev/</i></b></a> <p></p>
+  <a href = "https://calnote.onrender.com"><b><i>Backend: https://calnote.onrender.com</i></b></a>
+  <p></p>
 
   <!-- Badges -->
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
