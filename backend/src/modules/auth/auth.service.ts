@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { UserModel, IUser } from '../../models/User.model';
 import { AppError } from '../../utils/AppError';
