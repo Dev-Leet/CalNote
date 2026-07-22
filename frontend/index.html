@@ -2,9 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>CP Calendar Pro</title>
-    <meta name="description" content="AI-powered scheduling and note-taking for competitive programmers." />
+    <meta name="description" content="AI-powered scheduling, notes, and code execution for competitive programmers." />
+
+    <!-- PWA -->
+    <!--
+      theme-color is unsupported in Firefox (desktop + Android) and Opera —
+      confirmed, not a false positive from the linter. It degrades
+      gracefully: unsupported browsers simply ignore the tag and render
+      their own default chrome color, so this is safe to leave as-is if
+      you want the Chrome/Edge/Safari-on-iOS benefit (colored address bar /
+      status bar matching the app theme) and don't mind Firefox users not
+      getting that cosmetic touch. Removing it entirely trades away that
+      benefit for zero functional difference.
+    -->
+    <meta name="theme-color" content="#15171F" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/assets/pwa-192x192.png" />
+
+    <!--
+      iOS/Safari-specific PWA tags. Safari does NOT read theme-color or
+      display: 'standalone' from the manifest the way Chrome/Android do —
+      it needs its own apple-* meta tags to achieve an equivalent
+      full-screen, no-browser-chrome experience when launched from the
+      home screen.
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CalNote" />
+    <link rel="apple-touch-startup-image" href="/assets/pwa-512x512.png" />
   </head>
   <body>
     <div id="root"></div>

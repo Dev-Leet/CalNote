@@ -22,6 +22,21 @@ body {
   transition: background-color 180ms ease, color 180ms ease;
 }
 
+/*
+  iOS standalone-mode safe-area padding. env(safe-area-inset-*) resolves to
+  0 on every non-notched device/browser, so this rule is a genuine no-op
+  everywhere except iPhones running the installed PWA — safe to apply
+  unconditionally rather than gating behind a media query.
+*/
+@supports (padding: max(0px)) {
+  #root {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
 button, input, select, textarea {
   font-family: inherit;
 }
