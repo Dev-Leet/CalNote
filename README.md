@@ -20,6 +20,7 @@
 
 <!-- Status Badges -->
 <img src="https://img.shields.io/badge/status-live-34D399?style=flat-square" alt="Status"/>
+<img src="https://img.shields.io/badge/PWA-installable-8B7CF6?style=flat-square&logo=pwa&logoColor=white" alt="PWA Installable"/>
 <img src="https://img.shields.io/badge/license-MIT-F5A623?style=flat-square" alt="License"/>
 <img src="https://img.shields.io/badge/PRs-welcome-8B7CF6?style=flat-square" alt="PRs Welcome"/>
 <img src="https://img.shields.io/badge/TypeScript-strict-007ACC?style=flat-square" alt="TypeScript Strict"/>
@@ -53,6 +54,8 @@ Instead of just creating isolated events, the AI reasons over your existing cale
 
 At its core is a **pluggable dual-provider AI engine**: **Ashna AI** (a managed, OpenAI-compatible AI platform) and a **Custom AI Agent** (powered by Google's Gemini API) are both routed through a shared Strategy Pattern, so the rest of the app never needs to know which one produced a given event. The active provider is configured once in **Settings**.
 
+The frontend is a fully installable **Progressive Web App** — add it to your home screen or desktop for a native-app-like experience, with fast repeat loads and resilient offline messaging (see [Progressive Web App](#-progressive-web-app) for exactly what is and isn't available offline).
+
 <br/>
 
 <div align="center">
@@ -77,6 +80,7 @@ At its core is a **pluggable dual-provider AI engine**: **Ashna AI** (a managed,
 **Dig Deeper**
 - [🏗️ Architecture](#️-architecture-overview)
 - [🧠 AI Strategy Engine](#-the-ai-strategy-engine)
+- [📱 Progressive Web App](#-progressive-web-app)
 - [📂 Project Structure](#-project-structure)
 - [📡 API Reference](#-api-overview)
 
@@ -138,6 +142,9 @@ Clicking a calendar event shows details — including AI reasoning — in the si
 ### 🌗 Light/Dark Mode + Header Clock
 A cohesive, professional theme in both modes, plus a live IST clock with a 12h/24h toggle.
 
+### 📲 Installable PWA
+Add to your home screen on desktop, Android, or iOS for a native-app-like experience — fast repeat loads via a precached app shell, and honest offline messaging for the features that genuinely can't work without a connection.
+
 ### 🔒 Secure, Race-Free Auth
 JWT with rotating refresh tokens, reuse-detection, and atomic (race-condition-free) preference and session updates.
 
@@ -154,6 +161,7 @@ JWT with rotating refresh tokens, reuse-detection, and atomic (race-condition-fr
 | Layer | Technologies |
 |:---|:---|
 | **Frontend** | ![React](https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white) TanStack Query · Zustand · React Router v6 |
+| **PWA** | `vite-plugin-pwa` (Workbox) — precached app shell, route-classified runtime caching, installable manifest, update/install prompts |
 | **Calendar / Editor** | react-big-calendar · Monaco Editor · Tiptap (rich text) |
 | **Voice** | Web Speech API (browser-native, zero external service) |
 | **Backend** | ![Node](https://img.shields.io/badge/Node.js-43853D?style=flat-square&logo=node.js&logoColor=white) ![Express](https://img.shields.io/badge/Express-404D59?style=flat-square&logo=express&logoColor=white) TypeScript (strict) |
@@ -233,6 +241,36 @@ interface AiProvider {
 
 <br/>
 
+## 📱 Progressive Web App
+
+CP Calendar Pro is a fully installable PWA — desktop, Android, and iOS all supported, each with the appropriate install flow for that platform.
+
+<table>
+<tr><td>
+
+- 🚀 **Precached app shell** — JS/CSS/HTML bundles are cached at build time (Workbox `CacheFirst`), so repeat loads are fast and largely network-independent.
+- 🎯 **Route-classified runtime caching**, deliberately *not* a blanket cache-everything strategy:
+
+  | Data | Strategy | Why |
+  |:---|:---|:---|
+  | `/ai/*`, `/code-execution/*`, `/auth/*` | **Network-only** | Live AI generation, code execution, and auth have no honest cached equivalent — serving stale output as current would be misleading |
+  | `/events`, `/notes`, `/users/me/preferences` | **Network-first**, 8s timeout, short cache fallback | Survives Render's cold-start wake window without a blank screen, while always preferring live data |
+  | `/contests` | **Stale-while-revalidate** | Server-side data only changes every 30 min anyway — instant from cache, quietly refreshed |
+  | Static assets, logo, icons | **Cache-first**, 30-day TTL | Rarely changes, safe to cache aggressively |
+
+- 🔔 **Explicit update prompts, never silent swaps** — a new deployed version waits for the user to click "Refresh Now," so mid-edit form state (e.g., Settings) is never discarded out from under them.
+- 📥 **Native install prompts** on Chrome/Edge/Android; automatic **manual "Add to Home Screen" instructions** on iOS Safari, where the standard install API doesn't exist at all.
+- 🍎 **iOS-specific handling** — status bar theming, safe-area-inset padding for the notch/Dynamic Island, and Safari's lack of `beforeinstallprompt` are all accounted for, not assumed away.
+- 🔒 **Per-user cache clearing on logout** — the runtime cache of events/notes/preferences is explicitly cleared when a user logs out, closing a low-probability but real window where a shared browser could otherwise serve one user's cached data to the next.
+
+</td></tr>
+</table>
+
+> [!IMPORTANT]
+> **What a PWA honestly delivers here, and what it deliberately doesn't:** installability and fast repeat loads, yes. Offline AI scheduling, offline code execution, or offline contest scraping — no. These are live, third-party-API-dependent features with no meaningful offline equivalent, and the app is explicit about that: an `OfflineBanner` tells users plainly that AI scheduling and code execution need a connection, rather than letting those features fail silently or confusingly while offline.
+
+<br/>
+
 ## 📂 Project Structure
 
 <details>
@@ -272,8 +310,11 @@ cp-calendar-pro/
 │   │   │   ├── notes/                 # editor, event picker, highlight-to-ask-AI
 │   │   │   ├── settings/               # account, AI prefs, scheduling, security
 │   │   │   ├── layout/                  # app shell, nav rail
-│   │   │   └── common/                   # error boundary, spinner, logo, toggles
+│   │   │   └── common/                   # error boundary, spinner, logo, toggles,
+│   │   │                                 # PWA install/update prompts, offline banner
 │   │   └── pages/                # landing, auth, home, calendar, notes, code…
+│   ├── public/
+│   │   └── assets/               # logo, generated PWA icons (192/512/maskable)
 │   ├── Dockerfile
 │   └── package.json
 │
@@ -491,6 +532,8 @@ Honestly tracked, not swept under the rug:
 - 🔌 **JDoodle/OneCompiler free-tier limits** — under heavy real use, the code execution cascade may fall through to the AI-simulated tier more often than expected. Always clearly labeled as simulated, never presented as real execution.
 - 🔁 **AI-generated `'custom'` recurrence** has no path to a real RRULE string yet — fully supported for *manually* created events, not yet reachable via AI-generated ones.
 - 🔄 **One-way Google Calendar sync** — `GET /events/google/upcoming` is read-only preview; Google-side events aren't auto-imported as editable local records.
+- 📴 **No true offline functionality for AI/code execution/contest scraping** — by design, not an oversight; see [Progressive Web App](#-progressive-web-app) for exactly what is cached vs. always network-dependent.
+- 🍏 **iOS PWA install requires manual "Add to Home Screen"** — Safari has no `beforeinstallprompt` equivalent; the app detects this and shows correct instructions rather than a broken install button.
 - 💡 A forward-looking **Product Innovation Report** covers features under evaluation: RAG-powered weakness diagnosis, a VS Code companion extension, cognitive-load-aware scheduling, and squad/duel social features.
 
 <br/>
