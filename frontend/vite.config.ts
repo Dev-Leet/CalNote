@@ -32,6 +32,15 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        // Excludes favicon.svg from the precache manifest specifically —
+        // it's currently ~2.5MB (almost certainly a bloated/unoptimized
+        // export, not a genuine vector — see the note in README/issue
+        // tracker to actually fix the source asset), which exceeds
+        // Workbox's default 2 MiB precache ceiling and hard-fails the
+        // build. Favicons don't need offline precaching at all — browsers
+        // fetch/cache them via normal HTTP independently of the service
+        // worker, so excluding it costs nothing functionally.
+        globIgnores: ['**/favicon.svg'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
 

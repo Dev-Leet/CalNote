@@ -5,13 +5,25 @@ import apiClient, { setAccessToken } from '../api/client';
 import { AppShell } from '../components/layout/AppShell';
 import { LandingPage } from '../pages/LandingPage';
 import { AuthPage } from '../pages/AuthPage';
+import { lazy, Suspense } from 'react';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { HomePage } from '../pages/HomePage';
 import { CalendarPage } from '../pages/CalendarPage';
 import { ContestsPage } from '../pages/ContestsPage';
-import { NotesPage } from '../pages/NotesPage';
 import { SettingsPage } from '../pages/SettingsPage';
-import { CodePage } from '../pages/CodePage';
 import { HelpPage } from '../pages/HelpPage';
+
+// Lazy-loaded specifically because these two pull in genuinely large
+// libraries (Monaco Editor, Tiptap) that most sessions never touch —
+// splitting them into their own chunks is what actually addresses Vite's
+// "chunk larger than 500kB" warning, rather than just raising the warning
+// threshold to hide it.
+const NotesPage = lazy(() => import('../pages/NotesPage').then((m) => ({ default: m.NotesPage })));
+const CodePage = lazy(() => import('../pages/CodePage').then((m) => ({ default: m.CodePage })));
+
+function withSuspense(element: React.ReactNode) {
+  return <Suspense fallback={<LoadingSpinner fullHeight />}>{element}</Suspense>;
+}
 
 function SessionBootstrap({ children }: { children: React.ReactNode }) {
   const [checked, setChecked] = useState(false);
@@ -95,8 +107,8 @@ const router = createBrowserRouter([
           { path: '/home', element: <HomePage /> },
           { path: '/calendar', element: <CalendarPage /> },
           { path: '/contests', element: <ContestsPage /> },
-          { path: '/notes', element: <NotesPage /> },
-          { path: '/code', element: <CodePage /> },
+          { path: '/notes', element: withSuspense(<NotesPage />) },
+          { path: '/code', element: withSuspense(<CodePage />) },
           { path: '/settings', element: <SettingsPage /> },
           { path: '/help', element: <HelpPage /> },
         ],
