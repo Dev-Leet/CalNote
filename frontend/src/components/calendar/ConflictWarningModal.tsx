@@ -12,9 +12,18 @@ interface ConflictWarningModalProps {
   conflicts: ConflictingEventSummary[];
   onCancel: () => void;
   onProceedAnyway: () => void;
+  onAdjustSchedule: () => void;
+  isAdjusting?: boolean;
 }
 
-export function ConflictWarningModal({ isOpen, conflicts, onCancel, onProceedAnyway }: ConflictWarningModalProps) {
+export function ConflictWarningModal({
+  isOpen,
+  conflicts,
+  onCancel,
+  onProceedAnyway,
+  onAdjustSchedule,
+  isAdjusting,
+}: ConflictWarningModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -47,7 +56,7 @@ export function ConflictWarningModal({ isOpen, conflicts, onCancel, onProceedAny
           ))}
         </ul>
 
-        <div className="flex justify-end gap-2.5">
+        <div className="flex flex-wrap justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
@@ -60,7 +69,17 @@ export function ConflictWarningModal({ isOpen, conflicts, onCancel, onProceedAny
             onClick={onProceedAnyway}
             className="rounded-pill bg-danger px-4 py-2 text-[13px] font-semibold text-bg-primary"
           >
-            Schedule Anyway
+            Allow Overlap
+          </button>
+          <button
+            type="button"
+            onClick={onAdjustSchedule}
+            disabled={isAdjusting}
+            className={`rounded-pill bg-accent-ashna px-4 py-2 text-[13px] font-semibold text-bg-primary ${
+              isAdjusting ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+            }`}
+          >
+            {isAdjusting ? 'Finding a slot…' : 'Adjust Schedule'}
           </button>
         </div>
       </div>

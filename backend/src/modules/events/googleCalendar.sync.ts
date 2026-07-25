@@ -1,8 +1,8 @@
 import { calendar_v3 } from 'googleapis';
+import { Types } from 'mongoose';
 import { getAuthorizedCalendarClient } from '../../config/google';
-import { IEvent } from '../../models/Event.model';
-import { IUser } from '../../models/User.model';
-import { EventModel } from '../../models/Event.model';
+import { IEvent, EventModel } from '../../models/Event.model';
+import { IUser, UserModel } from '../../models/User.model';
 import { logger } from '../../utils/logger';
 
 const CALENDAR_ID = 'primary';
@@ -113,6 +113,56 @@ export class GoogleCalendarSyncService {
   }
 
   /**
+   * Fetches Google Calendar events within an arbitrary [from, to) range —
+   * used by CalendarGrid to merge Google events into the actual calendar
+   * display, matching whatever range the grid is currently viewing.
+   * Deliberately separate from fetchUpcomingEvents below (which stays
+   * unchanged, still powers the sidebar preview widget) rather than
+   * merging the two into one parameterized method — keeps each call site's
+   * intent explicit and avoids risk of an accidental behavior change to
+   * the already-working sidebar.
+   */
+  async fetchEventsInRange(
+    user: IUser,
+    from: Date,
+    to: Date,
+  ): Promise<{ googleEventId: string; title: string; startTime: string; endTime: string; isAllDay: boolean }[]> {
+    if (!user.googleRefreshToken) {
+      return [];
+    }
+
+    try {
+      const calendar = getAuthorizedCalendarClient(user.googleRefreshToken);
+      const res = await calendar.events.list({
+        calendarId: CALENDAR_ID,
+        timeMin: from.toISOString(),
+        timeMax: to.toISOString(),
+        maxResults: 250,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+
+      const items = res.data.items ?? [];
+
+      return items
+        .filter((item) => item.id && item.summary)
+        .map((item) => {
+          const isAllDay = !!item.start?.date && !item.start?.dateTime;
+          return {
+            googleEventId: item.id as string,
+            title: item.summary as string,
+            startTime: (item.start?.dateTime ?? item.start?.date) as string,
+            endTime: (item.end?.dateTime ?? item.end?.date) as string,
+            isAllDay,
+          };
+        });
+    } catch (err) {
+      logger.error({ err, userId: user._id.toString() }, 'Failed to fetch Google Calendar events in range');
+      return [];
+    }
+  }
+
+  /**
    * Fetches the user's upcoming events directly from their Google Calendar
    * (the "pull" direction — pushEvent/deleteEvent above only ever push OUR
    * events TO Google). Returns a normalized summary shape, not raw Google
@@ -157,6 +207,56 @@ export class GoogleCalendarSyncService {
       // so the caller can decide how to handle "no synced events available."
       return [];
     }
+  }
+
+  /**
+   * Pushes every local Event that doesn't yet have a googleCalendarEventId
+   * (i.e., was never synced). Used by the "Push All to Google Calendar"
+   * bulk action — deliberately NOT re-pushing already-synced events, since
+   * pushEvent() being idempotent per-call doesn't mean re-running it 200
+   * times for no reason is a good use of API quota or user wait time.
+   * Returns a full per-event result list rather than a single pass/fail,
+   * so partial failures (e.g. one event with malformed data) don't hide
+   * behind an otherwise-successful bulk run.
+   */
+  async pushAllUnsyncedEvents(
+    userId: string,
+  ): Promise<{ total: number; pushed: number; failed: { eventId: string; title: string; error: string }[] }> {
+    const user = await UserModel.findById(userId).select('+googleRefreshToken');
+    if (!user || !user.googleRefreshToken) {
+      return { total: 0, pushed: 0, failed: [] };
+    }
+
+    const unsyncedEvents = await EventModel.find({
+      userId: new Types.ObjectId(userId),
+      googleCalendarEventId: { $exists: false },
+    });
+
+    let pushed = 0;
+    const failed: { eventId: string; title: string; error: string }[] = [];
+
+    // Sequential, not Promise.all — pushing 100+ events concurrently
+    // against Google's Calendar API risks tripping their per-user rate
+    // limit and failing everything at once; sequential is slower but far
+    // more likely to actually complete a large backlog successfully.
+    for (const event of unsyncedEvents) {
+      try {
+        const googleEventId = await this.pushEvent(event, user);
+        if (googleEventId) {
+          pushed += 1;
+        } else {
+          failed.push({ eventId: event._id.toString(), title: event.title, error: 'Push returned no event ID' });
+        }
+      } catch (err) {
+        failed.push({
+          eventId: event._id.toString(),
+          title: event.title,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    return { total: unsyncedEvents.length, pushed, failed };
   }
 
   /**

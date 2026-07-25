@@ -209,6 +209,55 @@ export class EventService {
     });
   }
 
+  /**
+   * Given a desired [startTime, endTime) that conflicts with existing
+   * events, finds the next available gap of the same duration on the same
+   * calendar day, scanning forward from the desired start time. Returns
+   * null if no gap exists before end-of-day — deliberately does NOT search
+   * into the next day, since silently rescheduling a user's "practice at
+   * 7pm" request to "practice at 2am tomorrow" would violate the intent of
+   * the request far more than just telling them no slot was found.
+   */
+  async findNextAvailableSlot(
+    userId: string,
+    desiredStart: Date,
+    desiredEnd: Date,
+  ): Promise<{ startTime: Date; endTime: Date } | null> {
+    const durationMs = desiredEnd.getTime() - desiredStart.getTime();
+
+    const dayStart = new Date(desiredStart);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(desiredStart);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const dayEvents = await EventModel.find({
+      userId: new Types.ObjectId(userId),
+      startTime: { $lt: dayEnd },
+      endTime: { $gt: dayStart },
+    })
+      .select('startTime endTime')
+      .sort({ startTime: 1 })
+      .lean();
+
+    // Candidate slots: try the desired start first (in case the "conflict"
+    // was against an event that's actually since been deleted/changed by
+    // the time this resolves), then each existing event's end-time as a
+    // candidate next-start, in chronological order.
+    const candidates = [desiredStart, ...dayEvents.map((e) => e.endTime)];
+
+    for (const candidateStart of candidates) {
+      const candidateEnd = new Date(candidateStart.getTime() + durationMs);
+      if (candidateEnd > dayEnd) continue; // would run past end of day
+
+      const conflictResult = await this.checkConflicts(userId, candidateStart, candidateEnd);
+      if (!conflictResult.hasConflict) {
+        return { startTime: candidateStart, endTime: candidateEnd };
+      }
+    }
+
+    return null;
+  }
+
   async getEventsInRange(userId: string, from: Date, to: Date): Promise<IEvent[]> {
     return EventModel.find({
       userId: new Types.ObjectId(userId),

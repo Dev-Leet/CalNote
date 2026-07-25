@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import apiClient from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
+import { PushToGoogleButton } from '../calendar/PushToGoogleButton';
 
 export function AccountSection() {
   const user = useAuthStore((s) => s.user);
@@ -43,6 +44,8 @@ export function AccountSection() {
           {isLinkingGoogle ? 'Redirecting…' : 'Link Google Calendar'}
         </button>
       </label>
+
+      <PushToGoogleButton />
 
       <button
         type="button"

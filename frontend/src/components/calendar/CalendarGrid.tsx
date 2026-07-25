@@ -4,16 +4,23 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enIN } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useEventsQuery } from '../../queries/useEventsQuery';
+import { useGoogleCalendarRangeQuery } from '../../queries/useGoogleCalendarRangeQuery';
 import { EventChip } from './EventChip';
 import { EventDto } from '../../types/shared';
- 
+
+export type CalendarEventSource = EventDto['source'] | 'google-calendar';
+
 export interface CalendarEventVM {
   id: string;
   title: string;
   start: Date;
   end: Date;
-  source: EventDto['source'];
+  source: CalendarEventSource;
   aiReasoning?: string;
+  /** True only for Google-only events with no corresponding local Event
+   *  document — used to hide delete/edit affordances, since we don't own
+   *  this data. */
+  isExternal?: boolean;
 }
 
 const locales = { 'en-IN': enIN };
@@ -26,7 +33,7 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const SOURCE_COLOR: Record<CalendarEventVM['source'], { text: string; border: string; bg: string }> = {
+const SOURCE_COLOR: Record<CalendarEventSource, { text: string; border: string; bg: string }> = {
   manual: {
     text: 'var(--color-text-primary)',
     border: 'var(--color-border-subtle)',
@@ -41,6 +48,11 @@ const SOURCE_COLOR: Record<CalendarEventVM['source'], { text: string; border: st
     text: 'var(--color-accent-custom)',
     border: 'var(--color-accent-custom)',
     bg: 'var(--color-accent-custom-tint)',
+  },
+  'google-calendar': {
+    text: 'var(--color-success)',
+    border: 'var(--color-success)',
+    bg: 'var(--color-success-tint)',
   },
 };
 
@@ -69,11 +81,34 @@ export function CalendarGrid({ onSelectEvent, onSelectSlot }: CalendarGridProps)
     return { from: from.toISOString(), to: to.toISOString() };
   });
 
-  // Previously this component had its own inline fetchEvents + useQuery
-  // duplicating exactly what useEventsQuery already does — now delegates
-  // to the shared hook so query-key/staleTime behavior stays centralized.
-  const { data: eventDtos = [], isLoading } = useEventsQuery({ from: range.from, to: range.to });
-  const events = useMemo(() => eventDtos.map(toVM), [eventDtos]);
+  const { data: eventDtos = [], isLoading: isLoadingLocal } = useEventsQuery({ from: range.from, to: range.to });
+  const { data: googleData, isLoading: isLoadingGoogle } = useGoogleCalendarRangeQuery(range.from, range.to);
+
+  const events = useMemo(() => {
+    const localEvents = eventDtos.map(toVM);
+
+    // Google events are matched against local events by googleCalendarEventId
+    // (set on our own Event documents once pushed — see googleCalendar.sync.ts's
+    // pushEvent). Any local event already has its own entry above; only Google
+    // events with NO corresponding local record are added as external/read-only,
+    // so a CP Calendar Pro event that's ALSO synced to Google never renders twice.
+    const localGoogleIds = new Set(
+      eventDtos.filter((e) => e.googleCalendarEventId).map((e) => e.googleCalendarEventId as string),
+    );
+
+    const externalGoogleEvents: CalendarEventVM[] = (googleData?.events ?? [])
+      .filter((ge) => !localGoogleIds.has(ge.googleEventId))
+      .map((ge) => ({
+        id: `google:${ge.googleEventId}`,
+        title: ge.title,
+        start: new Date(ge.startTime),
+        end: new Date(ge.endTime),
+        source: 'google-calendar' as const,
+        isExternal: true,
+      }));
+
+    return [...localEvents, ...externalGoogleEvents];
+  }, [eventDtos, googleData]);
 
   const eventStyleGetter = useCallback((event: CalendarEventVM) => {
     const palette = SOURCE_COLOR[event.source];
@@ -100,16 +135,21 @@ export function CalendarGrid({ onSelectEvent, onSelectSlot }: CalendarGridProps)
 
   const components = useMemo(
     () => ({
-      // Previously an inline render function duplicating EventChip's logic —
-      // now renders the actual extracted component.
       event: ({ event }: { event: CalendarEventVM }) => <EventChip event={event} />,
     }),
     [],
   );
 
+  const handleSelectEvent = useCallback(
+    (event: CalendarEventVM) => {
+      onSelectEvent?.(event);
+    },
+    [onSelectEvent],
+  );
+
   return (
-    <div style={{ height: '100%', minHeight: '600px', position: 'relative' }}>
-      {isLoading && (
+    <div className="rbc-responsive-wrapper" style={{ height: '100%', minHeight: '480px', position: 'relative' }}>
+      {(isLoadingLocal || isLoadingGoogle) && (
         <div style={{ position: 'absolute', top: 8, right: 8, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
           Loading…
         </div>
@@ -123,20 +163,12 @@ export function CalendarGrid({ onSelectEvent, onSelectSlot }: CalendarGridProps)
         onView={setView}
         onRangeChange={handleRangeChange}
         selectable
-        onSelectEvent={onSelectEvent}
+        onSelectEvent={handleSelectEvent}
         onSelectSlot={onSelectSlot}
         eventPropGetter={eventStyleGetter}
         components={components}
         culture="en-IN"
         style={{ height: '100%' }}
-        // popup: true (RBC's default) lets react-big-calendar's own overlay
-        // intercept a day-cell click when a day has more events than fit —
-        // that's the ONLY case it should appear now that it's themed above.
-        // A single already-visible event click still calls onSelectEvent
-        // directly, which opens OUR EventDetailPopover — the two don't
-        // conflict, they handle genuinely different interactions (RBC's
-        // overlay = "show me everything on this crowded day", ours =
-        // "show me details for the one event I clicked").
         popup
       />
     </div>

@@ -5,6 +5,7 @@ import { AccountSection } from '../components/settings/AccountSection';
 import { AiPreferencesSection } from '../components/settings/AiPreferencesSection';
 import { SchedulingPreferencesSection } from '../components/settings/SchedulingPreferencesSection';
 import { SecuritySection } from '../components/settings/SecuritySection';
+import { FeedbackSection } from '../components/settings/FeedbackSection';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { UserPreferencesDto } from '../types/shared';
 
@@ -31,6 +32,7 @@ export function SettingsPage() {
       <AiPreferencesSection preferences={preferences} />
       <SchedulingPreferencesSection preferences={preferences} />
       <SecuritySection />
+      <FeedbackSection />
     </div>
   );
 }
