@@ -119,9 +119,9 @@ export function AiChatPanel() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-md bg-bg-surface">
-      <div className="flex items-center justify-between border-b border-border-subtle px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-border-subtle px-3.5 py-2.5">
         <span className="text-[13px] font-semibold text-text-primary">AI Chat</span>
-        <span className="rounded-pill bg-bg-elevated px-2.5 py-1 text-[11px] text-text-secondary">
+        <span className="whitespace-nowrap rounded-pill bg-bg-elevated px-2.5 py-1 text-[11px] text-text-secondary">
           Using: <span className="font-semibold text-text-primary">{provider === 'ashna' ? 'Ashna AI' : 'Custom AI Agent'}</span>
         </span>
       </div>
@@ -168,7 +168,7 @@ export function AiChatPanel() {
         <p className="border-t border-border-subtle px-3.5 pt-2 text-xs text-danger">{voiceError}</p>
       )}
 
-      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-border-subtle p-3">
+      <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 border-t border-border-subtle p-3 sm:flex-nowrap">
         {isVoiceSupported && (
           <button
             type="button"

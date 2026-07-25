@@ -102,7 +102,7 @@ export function CodeExecutionPanel() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-md bg-bg-surface">
-      <div className="flex items-center justify-between border-b border-border-subtle px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-3.5 py-2.5">
         {isLoadingLanguages ? (
           <LoadingSpinner size={16} />
         ) : (
@@ -119,7 +119,7 @@ export function CodeExecutionPanel() {
           </select>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-1 items-center justify-end gap-2 sm:flex-initial">
           <button
             type="button"
             onClick={() => askAshna()}

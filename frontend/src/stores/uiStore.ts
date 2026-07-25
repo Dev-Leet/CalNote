@@ -8,6 +8,12 @@ interface UiState {
   isConflictModalOpen: boolean;
   activeEventDetailId: string | null;
   showContestOverlay: boolean;
+  /** Mobile-only off-canvas nav drawer state — distinct from
+   *  isSidebarCollapsed (which was never wired to anything and is left
+   *  as-is for potential future desktop-collapse use). On mobile, NavRail
+   *  renders as a slide-in drawer controlled by this flag instead of the
+   *  always-visible rail desktop gets. */
+  isMobileNavOpen: boolean;
 
   setActiveCalendarView: (view: CalendarView) => void;
   toggleSidebar: () => void;
@@ -16,6 +22,9 @@ interface UiState {
   openEventDetail: (eventId: string) => void;
   closeEventDetail: () => void;
   toggleContestOverlay: () => void;
+  openMobileNav: () => void;
+  closeMobileNav: () => void;
+  toggleMobileNav: () => void;
 }
 
 /**
@@ -29,6 +38,7 @@ export const useUiStore = create<UiState>((set) => ({
   isConflictModalOpen: false,
   activeEventDetailId: null,
   showContestOverlay: true,
+  isMobileNavOpen: false,
 
   setActiveCalendarView: (view) => set({ activeCalendarView: view }),
   toggleSidebar: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
@@ -37,4 +47,7 @@ export const useUiStore = create<UiState>((set) => ({
   openEventDetail: (eventId) => set({ activeEventDetailId: eventId }),
   closeEventDetail: () => set({ activeEventDetailId: null }),
   toggleContestOverlay: () => set((s) => ({ showContestOverlay: !s.showContestOverlay })),
+  openMobileNav: () => set({ isMobileNavOpen: true }),
+  closeMobileNav: () => set({ isMobileNavOpen: false }),
+  toggleMobileNav: () => set((s) => ({ isMobileNavOpen: !s.isMobileNavOpen })),
 }));

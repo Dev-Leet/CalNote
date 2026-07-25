@@ -64,7 +64,7 @@ export function EventDetailsPanel({ event, onClose }: EventDetailsPanelProps) {
 
   return (
     <div className={`overflow-hidden rounded-lg border-l-4 bg-bg-surface ${SOURCE_BORDER[event.source]}`}>
-      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-border-subtle px-4 py-2.5">
         <h3 className="m-0 text-[13px] font-semibold text-text-primary">Event Details</h3>
         <button type="button" onClick={onClose} aria-label="Close" className="text-text-secondary">
           <X size={15} />

@@ -41,11 +41,11 @@ export function NotesPage() {
   };
 
   return (
-    <div className="grid h-full grid-cols-[320px_1fr] gap-5">
+    <div className="grid h-full grid-cols-1 gap-5 md:grid-cols-[320px_1fr]">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="m-0 text-xl text-text-primary">Notes</h1>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => setComposer({ mode: 'picking-event' })}

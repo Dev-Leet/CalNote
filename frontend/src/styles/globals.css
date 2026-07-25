@@ -163,6 +163,49 @@ a {
   padding: 2px 6px !important;
 }
 
+/*
+  Mobile toolbar fix. react-big-calendar's .rbc-toolbar renders three flex
+  groups (label, nav buttons, view buttons) in one row with no wrap
+  handling — on a narrow phone screen this is exactly what Images 3/6 show
+  overlapping the page heading above it. Below 640px: stack the three
+  groups vertically and let each group's own buttons wrap, rather than
+  forcing everything into one unbreakable row.
+*/
+@media (max-width: 640px) {
+  .rbc-responsive-wrapper .rbc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .rbc-responsive-wrapper .rbc-toolbar .rbc-toolbar-label {
+    order: -1;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 0;
+  }
+
+  .rbc-responsive-wrapper .rbc-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .rbc-responsive-wrapper .rbc-btn-group button {
+    flex: 1 1 auto;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  /* Time-gutter width eats disproportionate space on a narrow screen —
+     narrow it specifically on mobile rather than the fixed default. */
+  .rbc-responsive-wrapper .rbc-time-gutter,
+  .rbc-responsive-wrapper .rbc-time-header-gutter {
+    min-width: 44px !important;
+  }
+}
+
 .rbc-event-label {
   color: var(--color-text-secondary) !important;
   font-size: 11px !important;
