@@ -19,7 +19,7 @@ export function HomePage() {
         <p className="mt-1 text-sm text-text-secondary">Here's what's happening across your workspace.</p>
       </div>
 
-      <div className="grid flex-1 grid-cols-2 gap-5 overflow-y-auto">
+      <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto sm:grid-cols-2">
         <UpcomingEventsCard events={data?.upcomingEvents ?? []} isLoading={isLoading} />
         <CodeLaunchCard />
         <AiChatLaunchCard />

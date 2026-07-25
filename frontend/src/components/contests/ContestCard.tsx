@@ -57,9 +57,9 @@ export function ContestCard({ contest, onScheduleAround }: ContestCardProps) {
 
   return (
     <div className={`flex flex-col gap-2 rounded-md border-l-4 bg-bg-surface p-4 ${accent.border}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-1">
         <span className={`text-[11px] font-bold uppercase ${accent.text}`}>{contest.platform}</span>
-        <span className="text-xs text-text-secondary">{countdown}</span>
+        <span className="whitespace-nowrap text-xs text-text-secondary">{countdown}</span>
       </div>
 
       <a
