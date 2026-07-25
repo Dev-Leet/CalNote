@@ -14,18 +14,21 @@ const SOURCE_LABEL: Record<CalendarEventVM['source'], string> = {
   manual: 'Manually created',
   'ai-ashna': 'Scheduled by Ashna AI',
   'ai-custom': 'Scheduled by your Custom AI Agent',
+  'google-calendar': 'From your Google Calendar',
 };
 
 const SOURCE_BORDER: Record<CalendarEventVM['source'], string> = {
   manual: 'border-l-border-subtle',
   'ai-ashna': 'border-l-accent-ashna',
   'ai-custom': 'border-l-accent-custom',
+  'google-calendar': 'border-l-success',
 };
 
 const SOURCE_TEXT: Record<CalendarEventVM['source'], string> = {
   manual: 'text-text-secondary',
   'ai-ashna': 'text-accent-ashna',
   'ai-custom': 'text-accent-custom',
+  'google-calendar': 'text-success',
 };
 
 async function deleteEvent(eventId: string): Promise<void> {
@@ -89,16 +92,23 @@ export function EventDetailsPanel({ event, onClose }: EventDetailsPanelProps) {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => remove(event.id)}
-          disabled={isDeleting}
-          className={`w-full rounded-pill bg-danger py-2 text-[13px] font-semibold text-bg-primary ${
-            isDeleting ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-          }`}
-        >
-          {isDeleting ? 'Deleting…' : 'Delete Event'}
-        </button>
+        {event.isExternal ? (
+          <p className="m-0 text-xs text-text-secondary">
+            This event lives in your Google Calendar and can't be edited or deleted from here — manage it directly in
+            Google Calendar.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => remove(event.id)}
+            disabled={isDeleting}
+            className={`w-full rounded-pill bg-danger py-2 text-[13px] font-semibold text-bg-primary ${
+              isDeleting ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+            }`}
+          >
+            {isDeleting ? 'Deleting…' : 'Delete Event'}
+          </button>
+        )}
       </div>
     </div>
   );

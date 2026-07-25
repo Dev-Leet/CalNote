@@ -3,6 +3,27 @@ import { UserModel } from '../../models/User.model';
 import { googleCalendarSyncService } from './googleCalendar.sync';
 import { AppError } from '../../utils/AppError';
 
+export async function getGoogleEventsInRange(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { from, to } = req.query as { from: string; to: string };
+
+    const user = await UserModel.findById(req.user!.userId).select('+googleRefreshToken');
+    if (!user) {
+      throw new AppError('NOT_FOUND', 404, 'User not found');
+    }
+
+    if (!user.googleRefreshToken) {
+      res.status(200).json({ events: [], linked: false });
+      return;
+    }
+
+    const events = await googleCalendarSyncService.fetchEventsInRange(user, new Date(from), new Date(to));
+    res.status(200).json({ events, linked: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getUpcomingGoogleEvents(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const user = await UserModel.findById(req.user!.userId).select('+googleRefreshToken');

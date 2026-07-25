@@ -31,6 +31,32 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
   }
 }
 
+/**
+ * Powers the "Adjust Schedule" option in ConflictWarningModal — given the
+ * originally-desired time range, returns the next available same-day slot
+ * without creating anything, so the frontend can show the proposed new
+ * time and let the user confirm before committing.
+ */
+export async function suggestAdjustedSlot(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { startTime, endTime } = req.body as { startTime: string; endTime: string };
+    const slot = await eventService.findNextAvailableSlot(req.user!.userId, new Date(startTime), new Date(endTime));
+
+    if (!slot) {
+      res.status(200).json({ found: false });
+      return;
+    }
+
+    res.status(200).json({
+      found: true,
+      startTime: slot.startTime.toISOString(),
+      endTime: slot.endTime.toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function updateEvent(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const event = await EventModel.findById(req.params.id);

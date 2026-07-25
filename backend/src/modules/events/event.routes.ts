@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
-import { listEvents, createEvent, updateEvent, deleteEvent } from './event.controller';
-import { getUpcomingGoogleEvents } from './googleCalendarFetch.controller';
+import { listEvents, createEvent, updateEvent, deleteEvent, suggestAdjustedSlot } from './event.controller';
+import { getUpcomingGoogleEvents, getGoogleEventsInRange } from './googleCalendarFetch.controller';
+import { pushAllToGoogle } from './googleCalendarPush.controller';
 
 const router = Router();
 router.use(requireAuth);
@@ -39,7 +40,20 @@ const updateEventSchema = createEventSchema.partial();
 
 router.get('/', validate(listQuerySchema, 'query'), listEvents);
 router.get('/google/upcoming', getUpcomingGoogleEvents);
+
+const googleRangeQuerySchema = z.object({
+  from: z.string().datetime({ offset: true }).or(z.string().date()),
+  to: z.string().datetime({ offset: true }).or(z.string().date()),
+});
+router.get('/google/range', validate(googleRangeQuerySchema, 'query'), getGoogleEventsInRange);
+router.post('/google/push-all', pushAllToGoogle);
 router.post('/', validate(createEventSchema), createEvent);
+
+const suggestSlotSchema = z.object({
+  startTime: z.string().datetime({ offset: true }),
+  endTime: z.string().datetime({ offset: true }),
+});
+router.post('/suggest-slot', validate(suggestSlotSchema), suggestAdjustedSlot);
 router.patch('/:id', validate(updateEventSchema), updateEvent);
 router.delete('/:id', deleteEvent);
 

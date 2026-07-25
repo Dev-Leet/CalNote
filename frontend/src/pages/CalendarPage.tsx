@@ -3,23 +3,45 @@ import { CalendarGrid, CalendarEventVM } from '../components/calendar/CalendarGr
 import { AiChatPanel } from '../components/ai/AiChatPanel';
 import { GoogleCalendarPreview } from '../components/calendar/GoogleCalendarPreview';
 import { EventDetailsPanel } from '../components/calendar/EventDetailsPanel';
+import { ConflictWarningModal } from '../components/calendar/ConflictWarningModal';
+import { ExportAgendaButton } from '../components/calendar/ExportAgendaButton';
+import { useCreateEventWithConflictCheck } from '../hooks/useCreateEventWithConflictCheck';
 import { SlotInfo } from 'react-big-calendar';
 
 export function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventVM | null>(null);
+  const {
+    attemptCreate,
+    isModalOpen,
+    conflicts,
+    isAdjusting,
+    adjustError,
+    cancel,
+    allowOverlap,
+    adjustSchedule,
+  } = useCreateEventWithConflictCheck();
 
   const handleSelectEvent = (event: CalendarEventVM) => {
     setSelectedEvent(event);
   };
 
-  const handleSelectSlot = (_slot: SlotInfo) => {
-    // Hook up to a "create manual event" modal here if desired.
+  const handleSelectSlot = (slot: SlotInfo) => {
+    const title = window.prompt('Event title:');
+    if (!title?.trim()) return;
+    attemptCreate({
+      title: title.trim(),
+      startTime: slot.start.toISOString(),
+      endTime: slot.end.toISOString(),
+    });
   };
 
   return (
-    <div className="grid h-full grid-cols-[1fr_360px] gap-5">
-      <div className="min-w-0">
-        <CalendarGrid onSelectEvent={handleSelectEvent} onSelectSlot={handleSelectSlot} />
+    <div className="grid h-full grid-cols-1 gap-5 md:grid-cols-[1fr_360px]">
+      <div className="flex min-w-0 flex-col gap-3" style={{ minHeight: '480px' }}>
+        <ExportAgendaButton />
+        <div className="min-h-0 flex-1">
+          <CalendarGrid onSelectEvent={handleSelectEvent} onSelectSlot={handleSelectSlot} />
+        </div>
       </div>
 
       <div className="flex h-full min-h-0 flex-col gap-4">
@@ -36,6 +58,20 @@ export function CalendarPage() {
           <AiChatPanel />
         </div>
       </div>
+
+      <ConflictWarningModal
+        isOpen={isModalOpen}
+        conflicts={conflicts}
+        onCancel={cancel}
+        onProceedAnyway={allowOverlap}
+        onAdjustSchedule={adjustSchedule}
+        isAdjusting={isAdjusting}
+      />
+      {adjustError && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-pill bg-warning px-4 py-2 text-xs font-semibold text-bg-primary">
+          {adjustError}
+        </div>
+      )}
     </div>
   );
 }

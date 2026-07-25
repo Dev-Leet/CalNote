@@ -39,6 +39,23 @@ export const eventsApi = {
     return data;
   },
 
+  async listGoogleInRange(from: string, to: string): Promise<{ events: GoogleCalendarEventSummary[]; linked: boolean }> {
+    const { data } = await apiClient.get<{ events: GoogleCalendarEventSummary[]; linked: boolean }>(
+      '/events/google/range',
+      { params: { from, to } },
+    );
+    return data;
+  },
+
+  async pushAllToGoogle(): Promise<{ total: number; pushed: number; failed: { eventId: string; title: string; error: string }[] }> {
+    const { data } = await apiClient.post<{
+      total: number;
+      pushed: number;
+      failed: { eventId: string; title: string; error: string }[];
+    }>('/events/google/push-all');
+    return data;
+  },
+
   async create(payload: CreateEventPayload): Promise<EventDto> {
     const { data } = await apiClient.post<{ event: EventDto }>('/events', payload);
     return data.event;
@@ -51,5 +68,18 @@ export const eventsApi = {
 
   async remove(eventId: string, cascadeNote = false): Promise<void> {
     await apiClient.delete(`/events/${eventId}`, { params: { cascadeNote } });
+  },
+
+  async suggestSlot(
+    startTime: string,
+    endTime: string,
+  ): Promise<{ found: false } | { found: true; startTime: string; endTime: string }> {
+    const { data } = await apiClient.post<{ found: boolean; startTime?: string; endTime?: string }>(
+      '/events/suggest-slot',
+      { startTime, endTime },
+    );
+    return data.found
+      ? { found: true, startTime: data.startTime as string, endTime: data.endTime as string }
+      : { found: false };
   },
 };
