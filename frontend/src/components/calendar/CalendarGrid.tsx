@@ -126,8 +126,31 @@ export function CalendarGrid({ onSelectEvent, onSelectSlot }: CalendarGridProps)
   }, []);
 
   const handleRangeChange = useCallback((newRange: Date[] | { start: Date; end: Date }) => {
+    // Day view fires onRangeChange with a single-element array (just
+    // [today]) rather than {start, end} OR a multi-day array — the
+    // previous logic did `newRange[newRange.length - 1]` for the "to"
+    // bound, which for a 1-element array resolves to the SAME instant as
+    // "from". That produces a [today 00:00, today 00:00) range — a
+    // zero-width window — so the events query correctly returns nothing,
+    // because nothing genuinely falls inside a zero-duration range. This
+    // is exactly why events silently vanished specifically in Day view.
+    // Fix: when we get a single-date array, expand it to that full day's
+    // [00:00, 23:59:59.999] bounds instead of treating it as both edges
+    // of an empty window.
     if (Array.isArray(newRange)) {
-      setRange({ from: newRange[0].toISOString(), to: newRange[newRange.length - 1].toISOString() });
+      const from = newRange[0];
+      const lastDate = newRange[newRange.length - 1];
+
+      if (newRange.length === 1) {
+        const dayStart = new Date(from);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(from);
+        dayEnd.setHours(23, 59, 59, 999);
+        setRange({ from: dayStart.toISOString(), to: dayEnd.toISOString() });
+        return;
+      }
+
+      setRange({ from: from.toISOString(), to: lastDate.toISOString() });
     } else {
       setRange({ from: newRange.start.toISOString(), to: newRange.end.toISOString() });
     }
