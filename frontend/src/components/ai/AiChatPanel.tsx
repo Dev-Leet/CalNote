@@ -118,6 +118,10 @@ export function AiChatPanel() {
   };
 
   return (
+    // h-full here now resolves against the fixed h-[320px]/h-[400px]
+    // parent from CalendarPage rather than an ambiguous flex-1 chain —
+    // this is what makes the panel's height actually deterministic
+    // instead of a byproduct of sibling content.
     <div className="flex h-full flex-col overflow-hidden rounded-md bg-bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-border-subtle px-3.5 py-2.5">
         <span className="text-[13px] font-semibold text-text-primary">AI Chat</span>

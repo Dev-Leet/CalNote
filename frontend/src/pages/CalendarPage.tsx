@@ -5,6 +5,7 @@ import { GoogleCalendarPreview } from '../components/calendar/GoogleCalendarPrev
 import { EventDetailsPanel } from '../components/calendar/EventDetailsPanel';
 import { ConflictWarningModal } from '../components/calendar/ConflictWarningModal';
 import { ExportAgendaButton } from '../components/calendar/ExportAgendaButton';
+import { PushToGoogleButton } from '../components/calendar/PushToGoogleButton';
 import { useCreateEventWithConflictCheck } from '../hooks/useCreateEventWithConflictCheck';
 import { SlotInfo } from 'react-big-calendar';
 
@@ -38,13 +39,34 @@ export function CalendarPage() {
   return (
     <div className="grid h-full grid-cols-1 gap-5 md:grid-cols-[1fr_360px]">
       <div className="flex min-w-0 flex-col gap-3" style={{ minHeight: '480px' }}>
-        <ExportAgendaButton />
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportAgendaButton />
+          <PushToGoogleButton />
+        </div>
         <div className="min-h-0 flex-1">
           <CalendarGrid onSelectEvent={handleSelectEvent} onSelectSlot={handleSelectSlot} />
         </div>
       </div>
 
-      <div className="flex h-full min-h-0 flex-col gap-4">
+      {/*
+        Sidebar restructured to fix two related bugs:
+        1. "AI chat window changes size" — it previously sat in a flex-1
+           div, so its height was whatever was LEFT OVER after the Google
+           preview + event-details panels (which genuinely change height
+           based on content — an empty "no event selected" state vs. a
+           real event with aiReasoning text). Now the chat panel gets a
+           fixed height (400px desktop / 320px mobile) that never depends
+           on its siblings' content.
+        2. "Chat disappears on mobile" — on the single-column mobile stack,
+           a flex-1 child with no bounded ancestor height can collapse to
+           near-zero. A fixed height guarantees it always renders at a
+           real, usable size regardless of viewport or sibling content.
+        The whole sidebar column now scrolls internally (overflow-y-auto)
+        if Google preview + event details + chat together exceed the
+        available vertical space, rather than any one panel fighting the
+        others for room.
+      */}
+      <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto">
         <div className="max-h-60 flex-none overflow-y-auto rounded-lg bg-bg-surface p-3.5">
           <h3 className="mb-2.5 text-[13px] font-semibold text-text-primary">My Google Calendar</h3>
           <GoogleCalendarPreview />
@@ -54,7 +76,7 @@ export function CalendarPage() {
           <EventDetailsPanel event={selectedEvent} onClose={() => setSelectedEvent(null)} />
         </div>
 
-        <div className="min-h-0 flex-1">
+        <div className="h-[320px] flex-none md:h-[400px]">
           <AiChatPanel />
         </div>
       </div>
