@@ -13,12 +13,19 @@ export interface ISleepWindow {
   end: string;   // "HH:mm", IST
 }
 
+export interface IProfileLink {
+  platform: string; // 'codeforces' | 'leetcode' | 'codechef' | 'atcoder' | 'custom'
+  label: string; // display label — the platform name, or a custom label if platform === 'custom'
+  url: string;
+}
+
 export interface IUserPreferences {
   defaultAiProvider: AiProviderType;
   customAiConfig?: ICustomAiConfig;
   sleepWindow: ISleepWindow;
-  timezone: 'Asia/Kolkata'; // locked per SRS constraint 3.4.3 — not user-editable
+  timezone: 'Asia/Kolkata';
   notifyBeforeContestMins: number;
+  profileLinks?: IProfileLink[];
 }
 
 export interface IRefreshToken {
@@ -67,6 +74,15 @@ const SleepWindowSchema = new Schema<ISleepWindow>(
   { _id: false },
 );
 
+const ProfileLinkSchema = new Schema<IProfileLink>(
+  {
+    platform: { type: String, required: true, trim: true },
+    label: { type: String, required: true, trim: true, maxlength: 40 },
+    url: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
 const UserPreferencesSchema = new Schema<IUserPreferences>(
   {
     defaultAiProvider: {
@@ -82,9 +98,10 @@ const UserPreferencesSchema = new Schema<IUserPreferences>(
       enum: ['Asia/Kolkata'],
       required: true,
       default: 'Asia/Kolkata',
-      immutable: true, // SRS 3.4.3: IST is enforced app-wide, not configurable per user
+      immutable: true,
     },
     notifyBeforeContestMins: { type: Number, required: true, default: 60 },
+    profileLinks: { type: [ProfileLinkSchema], default: undefined },
   },
   { _id: false },
 );

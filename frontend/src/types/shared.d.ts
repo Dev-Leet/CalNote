@@ -52,15 +52,19 @@ export interface NoteDto {
 }
 
 declare const SpeechRecognition: { new (): SpeechRecognition };
+export interface ProfileLinkDto {
+  platform: string;
+  label: string;
+  url: string;
+}
+
 export interface UserPreferencesDto {
   defaultAiProvider: AiProviderType;
-  // Optional per the SchedulingPreferencesSection undefined-safety fix —
-  // legacy user documents may not have this populated. Every consumer must
-  // handle the undefined case (fallback defaults), not assume it's always present.
   sleepWindow?: { start: string; end: string };
   timezone: 'Asia/Kolkata';
   notifyBeforeContestMins?: number;
   customAiConfig?: { endpoint: string; model: string; hasApiKey: boolean };
+  profileLinks?: ProfileLinkDto[];
 }
 
 export interface ApiErrorResponse {

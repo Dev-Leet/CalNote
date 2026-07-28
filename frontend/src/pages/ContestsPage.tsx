@@ -2,6 +2,7 @@
 import { useContestsQuery } from '../queries/useContestsQuery';
 import { ContestList } from '../components/contests/ContestList';
 import { ContestVM } from '../components/contests/ContestCard';
+import { ProfileLinksSection } from '../components/contests/ProfileLinksSection';
 import { ContestDto } from '../types/shared';
 
 function toVM(dto: ContestDto): ContestVM {
@@ -35,6 +36,9 @@ export function ContestsPage() {
       <h1 style={{ color: 'var(--color-text-primary)', fontSize: '22px', marginBottom: '16px' }}>
         Upcoming Contests
       </h1>
+      <div className="mb-4">
+        <ProfileLinksSection />
+      </div>
       <ContestList contests={contests} isLoading={isLoading} onScheduleAround={handleScheduleAround} />
     </div>
   );

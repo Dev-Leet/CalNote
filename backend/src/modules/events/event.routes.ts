@@ -5,6 +5,7 @@ import { validate } from '../../middleware/validate.middleware';
 import { listEvents, createEvent, updateEvent, deleteEvent, suggestAdjustedSlot } from './event.controller';
 import { getUpcomingGoogleEvents, getGoogleEventsInRange } from './googleCalendarFetch.controller';
 import { pushAllToGoogle } from './googleCalendarPush.controller';
+import { generateSleepSchedule, getFutureSleepBlockCount, regenerateSleepSchedule } from './sleepSchedule.controller';
 
 const router = Router();
 router.use(requireAuth);
@@ -47,6 +48,9 @@ const googleRangeQuerySchema = z.object({
 });
 router.get('/google/range', validate(googleRangeQuerySchema, 'query'), getGoogleEventsInRange);
 router.post('/google/push-all', pushAllToGoogle);
+router.post('/sleep-schedule/generate', generateSleepSchedule);
+router.get('/sleep-schedule/future-count', getFutureSleepBlockCount);
+router.post('/sleep-schedule/regenerate', regenerateSleepSchedule);
 router.post('/', validate(createEventSchema), createEvent);
 
 const suggestSlotSchema = z.object({

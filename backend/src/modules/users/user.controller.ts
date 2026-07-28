@@ -12,6 +12,7 @@ interface UpdatePreferencesBody {
     apiKey: string;
     model: string;
   };
+  profileLinks?: { platform: string; label: string; url: string }[];
 }
 
 const DEFAULT_SLEEP_WINDOW = { start: '23:00', end: '06:00' };
@@ -65,6 +66,9 @@ export async function updatePreferences(req: Request, res: Response, next: NextF
         model: body.customAiConfig.model,
         apiKeyEncrypted: encryptField(body.customAiConfig.apiKey),
       };
+    }
+    if (body.profileLinks !== undefined) {
+      setFields['preferences.profileLinks'] = body.profileLinks;
     }
 
     if (Object.keys(setFields).length === 0) {
