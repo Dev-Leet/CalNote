@@ -29,6 +29,15 @@ export interface IEvent extends Document {
   aiReasoning?: string; // populated only when source is 'ai-ashna' | 'ai-custom'
   googleCalendarEventId?: string;
   noteId?: Types.ObjectId;
+  /**
+   * Marks an event as an auto-generated sleep block (see
+   * sleepSchedule.service.ts) — deliberately a separate optional boolean
+   * rather than a new `source` enum value, since extending that union has
+   * repeatedly broken every hardcoded Record<EventSource, ...> map across
+   * the app (CalendarGrid, EventDetailsPanel, the PDF exporter, etc.).
+   * This field is additive and touches none of those.
+   */
+  isAutoSleepBlock?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +76,7 @@ const EventSchema = new Schema<IEvent>(
     },
     googleCalendarEventId: { type: String, default: undefined, index: true, sparse: true },
     noteId: { type: Schema.Types.ObjectId, ref: 'Note', default: undefined },
+    isAutoSleepBlock: { type: Boolean, default: undefined },
   },
   { timestamps: true },
 );

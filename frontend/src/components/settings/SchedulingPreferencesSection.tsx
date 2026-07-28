@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../api/client';
+import { useSleepScheduleSync } from '../../hooks/useSleepScheduleSync';
+import { SleepScheduleConfirmModal } from './SleepScheduleConfirmModal';
+import { SleepScheduleResultToast } from './SleepScheduleResultToast';
 import { UserPreferencesDto } from '../../types/shared';
 
 interface UpdatePreferencesPayload {
@@ -34,18 +37,29 @@ export function SchedulingPreferencesSection({ preferences }: SchedulingPreferen
     setNotifyMins(preferences.notifyBeforeContestMins ?? DEFAULT_NOTIFY_MINS);
   }, [preferences]);
 
+  const {
+    syncAfterPreferenceChange,
+    pending: pendingRegeneration,
+    confirmRegeneration,
+    cancelRegeneration,
+    isRegenerating,
+    lastResult,
+    dismissResult,
+  } = useSleepScheduleSync();
+
   const { mutate, isPending } = useMutation({
     mutationFn: savePreferences,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(['preferences'], data);
       setSavedMessage('Scheduling preferences saved');
       setTimeout(() => setSavedMessage(null), 3000);
+      // Fires only when the sleep window is actually part of THIS save —
+      // triggers either an automatic 10-day fresh generation (if no
+      // auto-sleep blocks exist yet) or the "replace existing?"
+      // confirmation modal (if some do) — see useSleepScheduleSync.
+      await syncAfterPreferenceChange();
     },
     onError: () => {
-      // Previously this failure was completely silent — the save mutation
-      // had no onError handler at all, so a failed persist (e.g. the
-      // VersionError race fixed above) left the user with no indication
-      // anything went wrong until the value reverted on a later refetch.
       setSavedMessage('Failed to save — please try again');
       setTimeout(() => setSavedMessage(null), 4000);
     },
@@ -124,6 +138,17 @@ export function SchedulingPreferencesSection({ preferences }: SchedulingPreferen
       >
         {isPending ? 'Saving…' : 'Save Preferences'}
       </button>
+
+      {lastResult && <SleepScheduleResultToast result={lastResult} onDismiss={dismissResult} />}
+
+      {pendingRegeneration && (
+        <SleepScheduleConfirmModal
+          futureCount={pendingRegeneration.futureCount}
+          onConfirm={confirmRegeneration}
+          onCancel={cancelRegeneration}
+          isRegenerating={isRegenerating}
+        />
+      )}
     </form>
   );
 }

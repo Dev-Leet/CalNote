@@ -68,41 +68,54 @@ export class GoogleCalendarSyncService {
    * if event.googleCalendarEventId already exists, performs an update instead
    * of creating a duplicate.
    */
+  /**
+   * Two genuinely different "no result" cases were previously both
+   * collapsed into a bare `null` return: (1) the user hasn't linked Google
+   * — a legitimate no-op, not an error — and (2) the Google API call
+   * itself failed for some real reason (invalid payload, expired token,
+   * quota, etc.), which was being caught, LOGGED SERVER-SIDE ONLY, and
+   * then also returned as null — completely indistinguishable from case
+   * (1) to any caller, including pushAllUnsyncedEvents, which is why its
+   * failure summary could only ever say the unhelpful "no event ID"
+   * rather than the real reason. Fix: only return null for the genuine
+   * no-op case; let real API errors propagate as a thrown Error so
+   * callers can see and surface the actual message. Every current caller
+   * (syncToGoogleCalendarIfLinked's fire-and-forget wrapper,
+   * pushAllUnsyncedEvents's per-event try/catch) already wraps its own
+   * call in a try/catch, so this is safe — nothing here risks an
+   * unhandled rejection.
+   */
   async pushEvent(event: IEvent, user: IUser): Promise<string | null> {
     if (!user.googleRefreshToken) {
-      // User hasn't linked Google Calendar — not an error, just a no-op (FR-4.3 is opt-in).
       return null;
     }
 
-    try {
-      const calendar = getAuthorizedCalendarClient(user.googleRefreshToken);
-      const body = toGoogleEventBody(event);
+    const calendar = getAuthorizedCalendarClient(user.googleRefreshToken);
+    const body = toGoogleEventBody(event);
 
-      if (event.googleCalendarEventId) {
-        const res = await calendar.events.update({
-          calendarId: CALENDAR_ID,
-          eventId: event.googleCalendarEventId,
-          requestBody: body,
-        });
-        return res.data.id ?? null;
-      }
-
-      const res = await calendar.events.insert({
+    if (event.googleCalendarEventId) {
+      const res = await calendar.events.update({
         calendarId: CALENDAR_ID,
+        eventId: event.googleCalendarEventId,
         requestBody: body,
       });
-
-      if (res.data.id) {
-        await EventModel.updateOne({ _id: event._id }, { $set: { googleCalendarEventId: res.data.id } });
+      if (!res.data.id) {
+        throw new Error('Google Calendar update returned no event ID in its response');
       }
-
-      return res.data.id ?? null;
-    } catch (err) {
-      // GCal sync failures must not block the core event-creation flow
-      // (NFR-2 graceful degradation) — log and continue.
-      logger.error({ err, eventId: event._id.toString(), userId: user._id.toString() }, 'Google Calendar sync failed');
-      return null;
+      return res.data.id;
     }
+
+    const res = await calendar.events.insert({
+      calendarId: CALENDAR_ID,
+      requestBody: body,
+    });
+
+    if (!res.data.id) {
+      throw new Error('Google Calendar insert returned no event ID in its response');
+    }
+
+    await EventModel.updateOne({ _id: event._id }, { $set: { googleCalendarEventId: res.data.id } });
+    return res.data.id;
   }
 
   async deleteEvent(event: IEvent, user: IUser): Promise<void> {

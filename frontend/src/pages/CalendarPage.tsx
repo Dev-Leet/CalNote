@@ -37,13 +37,32 @@ export function CalendarPage() {
   };
 
   return (
-    <div className="grid h-full grid-cols-1 gap-5 md:grid-cols-[1fr_360px]">
-      <div className="flex min-w-0 flex-col gap-3" style={{ minHeight: '480px' }}>
+    // h-full is now DESKTOP-ONLY (md:h-full). On mobile the container has
+    // no fixed height at all, so its stacked children (calendar block,
+    // then sidebar block) are free to take their natural, bounded heights
+    // and the PAGE itself scrolls past them (via AppShell's <main
+    // overflow-auto>) — this is what actually fixes "the calendar feels
+    // fixed while the page won't move": there's no longer a viewport-height
+    // ceiling forcing the calendar's own internal scroll areas to absorb
+    // touch gestures meant for the page.
+    <div className="grid grid-cols-1 gap-5 md:h-full md:grid-cols-[1fr_360px]">
+      <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <ExportAgendaButton />
           <PushToGoogleButton />
         </div>
-        <div className="min-h-0 flex-1">
+        {/*
+          Calendar's own height is now an explicit, BOUNDED value on mobile
+          (65vh — roughly two-thirds of the visible screen, leaving room to
+          see there's more content below) rather than a bare minHeight
+          floor with no ceiling. This gives react-big-calendar's own
+          internal scrolling (hour grid in Week/Day view, row overflow in
+          Month view) a predictable box to work within, while the PAGE
+          scrolls normally to reach the sidebar/chat section beneath it.
+          Desktop reverts to filling the full split-column height exactly
+          as before.
+        */}
+        <div className="h-[65vh] md:h-auto md:min-h-0 md:flex-1">
           <CalendarGrid onSelectEvent={handleSelectEvent} onSelectSlot={handleSelectSlot} />
         </div>
       </div>
