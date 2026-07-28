@@ -82,4 +82,25 @@ export const eventsApi = {
       ? { found: true, startTime: data.startTime as string, endTime: data.endTime as string }
       : { found: false };
   },
+
+  async generateSleepSchedule(): Promise<SleepScheduleResult> {
+    const { data } = await apiClient.post<SleepScheduleResult>('/events/sleep-schedule/generate');
+    return data;
+  },
+
+  async getFutureSleepBlockCount(): Promise<number> {
+    const { data } = await apiClient.get<{ count: number }>('/events/sleep-schedule/future-count');
+    return data.count;
+  },
+
+  async regenerateSleepSchedule(): Promise<SleepScheduleResult> {
+    const { data } = await apiClient.post<SleepScheduleResult>('/events/sleep-schedule/regenerate');
+    return data;
+  },
 };
+
+export interface SleepScheduleResult {
+  created: number;
+  skipped: { date: string; reason: string }[];
+  alreadyExisted: number;
+}

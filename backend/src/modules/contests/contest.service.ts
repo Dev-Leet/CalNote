@@ -96,11 +96,27 @@ export class ContestService {
    */
   async purgeStaleContests(): Promise<number> {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const result = await ContestModel.deleteMany({ endTime: { $lt: cutoff } });
-    if (result.deletedCount > 0) {
-      logger.info({ deletedCount: result.deletedCount }, 'Purged stale (7+ day old) contests');
+    const staleResult = await ContestModel.deleteMany({ endTime: { $lt: cutoff } });
+    if (staleResult.deletedCount > 0) {
+      logger.info({ deletedCount: staleResult.deletedCount }, 'Purged stale (7+ day old) contests');
     }
-    return result.deletedCount ?? 0;
+
+    // One-time-effective cleanup: removes CodeChef entries stored before
+    // the 4-hour filter above existed. Runs every cycle but is a no-op
+    // once the backlog is cleared — codechef.source.ts's filter prevents
+    // any new ones from ever reaching this collection again.
+    const longFormatResult = await ContestModel.deleteMany({
+      platform: 'codechef',
+      durationMinutes: { $gte: 240 },
+    });
+    if (longFormatResult.deletedCount > 0) {
+      logger.info(
+        { deletedCount: longFormatResult.deletedCount },
+        'Purged pre-existing long-format (4h+) CodeChef entries',
+      );
+    }
+
+    return (staleResult.deletedCount ?? 0) + (longFormatResult.deletedCount ?? 0);
   }
 
   async invalidateContestCache(): Promise<void> {

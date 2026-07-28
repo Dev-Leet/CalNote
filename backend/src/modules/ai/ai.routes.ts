@@ -6,6 +6,7 @@ import { aiScheduleRateLimiter } from '../../middleware/rateLimit.middleware';
 import { aiScheduleBodySchema } from './ai.validation';
 import { postAiSchedule, getAiScheduleStatus } from './ai.controller';
 import { askNotesAi } from './notesAi.controller';
+import { extractSchedule } from './extraction.controller';
 
 const router = Router();
 
@@ -20,5 +21,11 @@ const notesAiAskSchema = z.object({
 });
 
 router.post('/notes/ask', requireAuth, aiScheduleRateLimiter, validate(notesAiAskSchema, 'body'), askNotesAi);
+
+const extractScheduleSchema = z.object({
+  text: z.string().min(1).max(8000),
+  provider: z.enum(['ashna', 'custom']).optional(),
+});
+router.post('/extract-schedule', requireAuth, aiScheduleRateLimiter, validate(extractScheduleSchema, 'body'), extractSchedule);
 
 export default router;

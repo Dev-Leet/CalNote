@@ -12,6 +12,12 @@ const sleepWindowSchema = z.object({
   end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:mm'),
 });
 
+const profileLinkSchema = z.object({
+  platform: z.string().min(1).max(30),
+  label: z.string().min(1).max(40),
+  url: z.string().url(),
+});
+
 const updatePreferencesSchema = z.object({
   defaultAiProvider: z.enum(['ashna', 'custom']).optional(),
   sleepWindow: sleepWindowSchema.optional(),
@@ -23,6 +29,7 @@ const updatePreferencesSchema = z.object({
       model: z.string().min(1),
     })
     .optional(),
+  profileLinks: z.array(profileLinkSchema).max(10).optional(),
 });
 
 router.get('/me/preferences', getPreferences);
