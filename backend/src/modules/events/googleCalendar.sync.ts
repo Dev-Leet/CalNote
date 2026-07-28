@@ -25,8 +25,20 @@ function toGoogleEventBody(event: IEvent): calendar_v3.Schema$Event {
     description: event.aiReasoning
       ? `AI reasoning (CP Calendar Pro): ${event.aiReasoning}`
       : undefined,
-    start: { dateTime: event.startTime.toISOString() },
-    end: { dateTime: event.endTime.toISOString() },
+    // Google Calendar's API requires an explicit `timeZone` field on
+    // start/end whenever using `dateTime` (non-all-day) events — this was
+    // the actual cause of "Missing time zone definition for start time."
+    // Using 'UTC' here (NOT 'Asia/Kolkata') is deliberate and matches the
+    // original design intent exactly: `dateTime` is already a complete,
+    // unambiguous UTC-offset instant via toISOString() ('...Z' suffix) —
+    // this field doesn't change WHEN the event occurs, only satisfies
+    // Google's validation requirement that SOME timeZone be present. The
+    // event still correctly displays in the viewer's own Google account
+    // timezone on Google's side (satisfying SRS constraint 3.4.4), since
+    // we're not forcing 'Asia/Kolkata' here — we're just telling Google
+    // "this dateTime string's own offset is UTC," which is simply true.
+    start: { dateTime: event.startTime.toISOString(), timeZone: 'UTC' },
+    end: { dateTime: event.endTime.toISOString(), timeZone: 'UTC' },
     recurrence: event.recurrence ? [buildRRuleString(event.recurrence)] : undefined,
     extendedProperties: {
       private: {
