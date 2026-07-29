@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { HelpCircle, Menu } from 'lucide-react';
 import apiClient from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
@@ -16,6 +17,7 @@ export function AppShell() {
   const openMobileNav = useUiStore((s) => s.openMobileNav);
   const closeMobileNav = useUiStore((s) => s.closeMobileNav);
   const location = useLocation();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     closeMobileNav();
@@ -33,6 +35,13 @@ export function AppShell() {
           // Cache API failures here shouldn't block logout.
         }
       }
+      // Clears every TanStack Query cache entry (events, notes,
+      // preferences, contests, google-calendar-range, sessions, etc.) —
+      // previously only the separate PWA Cache Storage entry was cleared,
+      // leaving react-query's own in-memory cache to potentially flash a
+      // previous user's data on a shared browser/tab before the next
+      // user's own fetch resolves.
+      queryClient.clear();
       clearSession();
       navigate('/auth', { replace: true });
     }

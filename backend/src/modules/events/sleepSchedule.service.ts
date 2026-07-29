@@ -106,7 +106,7 @@ export class SleepScheduleService {
           // conflict-detection on createEvent reject it if truly unresolvable.
         }
 
-        await eventService.createEvent({
+        const createdEvent = await eventService.createEvent({
           userId,
           title: 'Sleep',
           startTime: finalStart,
@@ -115,10 +115,11 @@ export class SleepScheduleService {
           force: true, // we've already done our own conflict resolution above
         });
 
-        await EventModel.updateOne(
-          { userId: new Types.ObjectId(userId), startTime: finalStart, endTime: desiredEnd, title: 'Sleep' },
-          { $set: { isAutoSleepBlock: true } },
-        );
+        // Uses the _id createEvent() already returned, instead of a second
+        // round-trip re-querying by field match — that was both wasteful
+        // and, in theory, ambiguous if two auto-sleep events ever shared
+        // identical start/end/title values.
+        await EventModel.updateOne({ _id: createdEvent._id }, { $set: { isAutoSleepBlock: true } });
 
         result.created += 1;
       } catch (err) {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import { ashnaClient } from './providers/ashna.client';
+import { geminiClient } from './providers/gemini.client';
 import { EXTRACTION_SYSTEM_PROMPT } from './extraction.prompts';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
@@ -85,11 +86,11 @@ export class ExtractionService {
       return parseAndValidate(content);
     }
 
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) throw new AppError('AI_PROVIDER_UNAVAILABLE', 422, 'Gemini is not configured');
-
-    const client = new GoogleGenAI({ apiKey: geminiApiKey });
-    const response = await client.models.generateContent({
+    // Reuses the app-wide shared client instance (same one GeminiAiService
+    // uses for scheduling) instead of constructing a new GoogleGenAI
+    // client per extraction call — consistent with the rest of the
+    // codebase's singleton pattern for this client.
+    const response = await geminiClient.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: rawText,
       config: {
