@@ -109,6 +109,15 @@ The frontend is a fully installable **Progressive Web App** — add it to your h
 ### 🧠 AI-Powered Scheduling
 Chat with your calendar in plain language. The AI reasons over your existing events, upcoming contests, and sleep window to schedule (or reschedule) blocks — no manual conflict-checking needed.
 
+### 📋 Paste-to-Schedule Extraction
+Paste unstructured text — an email, a notice, a WhatsApp message — and the AI extracts a structured day-by-day schedule (event, attendance, dress code, time, location, notes) into an editable review table before anything touches your calendar.
+
+### 🌙 Automatic Sleep Scheduling
+Save a sleep window in Settings and the next 10 nights are scheduled automatically. If a contest overlaps, sleep shifts to start right after it ends rather than being skipped. Changing your sleep window later asks before replacing any already-scheduled nights.
+
+### ⚖️ Three-Way Conflict Resolution
+Creating an event that overlaps another offers a real choice: Cancel, Allow Overlap, or **Adjust Schedule** — which finds the next free same-day slot automatically.
+
 ### 🎙️ Voice Input
 Speak your scheduling requests via the browser's native Web Speech API. The AI is told the input came from voice and interprets filler words and transcription artifacts charitably.
 
@@ -116,7 +125,7 @@ Speak your scheduling requests via the browser's native Web Speech API. The AI i
 A Strategy Pattern makes **Ashna AI** and a **Gemini-backed Custom Agent** fully interchangeable — configured once in Settings, both follow identical scheduling rules.
 
 ### 🏆 Automated Contest Aggregation
-A scheduled job scrapes **Codeforces, LeetCode, CodeChef, and AtCoder** every 30 minutes and auto-purges contests that ended 7+ days ago.
+A scheduled job scrapes **Codeforces, LeetCode, and CodeChef** every 30 minutes, filters out non-genuine long-format CodeChef entries (4+ hour "contests"), and auto-purges contests that ended 7+ days ago.
 
 ### 📝 Intentional Rich-Text Notes
 Built on Tiptap — notes are *never* auto-created from AI events. Pick a specific event from a searchable picker to write about it, or write standalone.
@@ -130,8 +139,17 @@ Select any code or text inside a note to get a floating Ashna AI panel — Expla
 ### 💻 In-App Code Execution
 A 3-tier fallback cascade (**JDoodle → OneCompiler → AI-simulated last resort**) runs code with a dedicated stdin field, independent of any single provider's uptime.
 
-### 🔐 Google Sign-In & Calendar Sync
-Two distinct flows: sign in with Google directly, or separately link Google Calendar from Settings to push events and preview your real calendar.
+### 🔐 Google Sign-In & Two-Way-Visible Calendar Sync
+Sign in with Google directly, or separately link Google Calendar from Settings. Linked events **appear directly on the app's own calendar grid** (clearly marked, de-duplicated against anything already synced), plus a one-click **"Push All to Google Calendar"** button for bulk-syncing anything not yet pushed, with a real per-event success/failure summary.
+
+### 📄 PDF Agenda Export
+Export any date range (This Week / This Month / Next 7 Days) as a PDF — a day-grouped narrative agenda with AI reasoning included, followed by a full flat reference table, paginated automatically for long ranges.
+
+### 🔗 CP Profile Links
+Save links to your Codeforces, LeetCode, or other competitive programming profiles on the Contests page and jump to them in one click.
+
+### 💬 Feedback, Built In
+A dedicated Settings section for bug reports, feature requests, and general feedback — category, optional star rating, and message, stored directly and queryable.
 
 ### 🏠 Landing Page + Home Dashboard
 Logged-out visitors see a marketing landing page; logged-in users land on a dashboard summarizing the week, recent notes, and quick-launch cards.
@@ -142,11 +160,11 @@ Clicking a calendar event shows details — including AI reasoning — in the si
 ### 🌗 Light/Dark Mode + Header Clock
 A cohesive, professional theme in both modes, plus a live IST clock with a 12h/24h toggle.
 
-### 📲 Installable PWA
-Add to your home screen on desktop, Android, or iOS for a native-app-like experience — fast repeat loads via a precached app shell, and honest offline messaging for the features that genuinely can't work without a connection.
+### 📲 Installable PWA, Genuinely Mobile-Responsive
+Add to your home screen on desktop, Android, or iOS — a collapsible off-canvas nav drawer, stacked responsive layouts, and a fixed-height chat panel replace what was originally a desktop-only layout.
 
 ### 🔒 Secure, Race-Free Auth
-JWT with rotating refresh tokens, reuse-detection, and atomic (race-condition-free) preference and session updates.
+JWT with rotating refresh tokens, reuse-detection, and atomic (race-condition-free) preference and session updates — including full query-cache clearing on logout to prevent any stale-data flash on shared devices.
 
 </td>
 </tr>
@@ -163,6 +181,7 @@ JWT with rotating refresh tokens, reuse-detection, and atomic (race-condition-fr
 | **Frontend** | ![React](https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white) TanStack Query · Zustand · React Router v6 |
 | **PWA** | `vite-plugin-pwa` (Workbox) — precached app shell, route-classified runtime caching, installable manifest, update/install prompts |
 | **Calendar / Editor** | react-big-calendar · Monaco Editor · Tiptap (rich text) |
+| **PDF Export** | jsPDF (client-side generation, no backend PDF service) |
 | **Voice** | Web Speech API (browser-native, zero external service) |
 | **Backend** | ![Node](https://img.shields.io/badge/Node.js-43853D?style=flat-square&logo=node.js&logoColor=white) ![Express](https://img.shields.io/badge/Express-404D59?style=flat-square&logo=express&logoColor=white) TypeScript (strict) |
 | **Database** | ![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=flat-square&logo=mongodb&logoColor=white) via Mongoose |
@@ -458,12 +477,14 @@ Base URL: `/api/v1` · Authenticated routes require `Authorization: Bearer <acce
 |:---|:---|
 | **Auth** | `POST /auth/register` · `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` |
 | **Google** | `POST /auth/google/signin` · `GET /auth/google/consent` · `GET /auth/google/callback` · `POST /auth/google/unlink` |
-| **Users** | `GET/PATCH /users/me/preferences` · `GET/DELETE /users/me/sessions/:deviceId` |
-| **Events** | `GET /events` · `GET /events/google/upcoming` · `POST /events` · `PATCH/DELETE /events/:id` |
-| **Contests** | `GET /contests` *(excludes ended)* · `POST /contests/refresh` *(admin)* |
+| **Users** | `GET/PATCH /users/me/preferences` (now includes `profileLinks`) · `GET/DELETE /users/me/sessions/:deviceId` |
+| **Events** | `GET /events` · `GET /events/google/upcoming` · `GET /events/google/range` (grid merge) · `POST /events/google/push-all` (bulk sync) · `POST /events` · `PATCH/DELETE /events/:id` · `POST /events/suggest-slot` (conflict "Adjust Schedule") |
+| **Sleep Schedule** | `POST /events/sleep-schedule/generate` · `GET /events/sleep-schedule/future-count` · `POST /events/sleep-schedule/regenerate` |
+| **Contests** | `GET /contests` (excludes ended + 4h+ CodeChef long-format entries) · `POST /contests/refresh` *(admin)* |
 | **Notes** | `GET/POST /notes` · `PATCH/DELETE /notes/:id` |
-| **AI Scheduling** | `POST /ai/schedule` · `GET /ai/schedule/status/:jobId` · `POST /ai/notes/ask` |
+| **AI Scheduling** | `POST /ai/schedule` · `GET /ai/schedule/status/:jobId` · `POST /ai/notes/ask` · `POST /ai/extract-schedule` (paste-to-schedule extraction) |
 | **Code Execution** | `GET /code-execution/runtimes` · `POST /code-execution/run` |
+| **Feedback** | `POST /feedback` |
 
 <details>
 <summary><b>Example: AI scheduling request/response</b></summary>
@@ -526,12 +547,14 @@ CP Calendar Pro enforces `Asia/Kolkata` (IST, UTC+5:30) as a **hard constraint**
 
 ## 🗺️ Known Gaps & Roadmap
 
-Honestly tracked, not swept under the rug:
+Honestly tracked, not swept under the rug. (Google Calendar events now render directly on the app's calendar grid, and a bulk "Push All to Google Calendar" button exists — both previously listed here as gaps — so this section reflects what's genuinely still open, not what's already shipped.)
 
 - 🐢 **Render free-tier cold starts** — mitigated via keep-alive ping, not eliminated.
 - 🔌 **JDoodle/OneCompiler free-tier limits** — under heavy real use, the code execution cascade may fall through to the AI-simulated tier more often than expected. Always clearly labeled as simulated, never presented as real execution.
 - 🔁 **AI-generated `'custom'` recurrence** has no path to a real RRULE string yet — fully supported for *manually* created events, not yet reachable via AI-generated ones.
-- 🔄 **One-way Google Calendar sync** — `GET /events/google/upcoming` is read-only preview; Google-side events aren't auto-imported as editable local records.
+- 🔄 **Google Calendar events aren't imported as editable local records** — they render on the grid and are visually distinct, but stay read-only; editing or deleting a Google-sourced event must be done in Google Calendar directly, not from CP Calendar Pro.
+- 📅 **"Adjust Schedule" (conflict resolution) only searches the same calendar day** — if no free slot exists that day, you get an honest "no slot found" message rather than the app searching into the next day.
+- 📋 **Paste-to-schedule extraction maps a weekday name to its *next* upcoming occurrence** — if pasted text is ambiguous about which specific week it refers to, the suggested date may need manual correction in the review table before confirming (which the table supports, but doesn't auto-detect the ambiguity).
 - 📴 **No true offline functionality for AI/code execution/contest scraping** — by design, not an oversight; see [Progressive Web App](#-progressive-web-app) for exactly what is cached vs. always network-dependent.
 - 🍏 **iOS PWA install requires manual "Add to Home Screen"** — Safari has no `beforeinstallprompt` equivalent; the app detects this and shows correct instructions rather than a broken install button.
 - 💡 A forward-looking **Product Innovation Report** covers features under evaluation: RAG-powered weakness diagnosis, a VS Code companion extension, cognitive-load-aware scheduling, and squad/duel social features.
